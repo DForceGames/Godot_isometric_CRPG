@@ -312,4 +312,4 @@ func add_damage_to_player(damage: int) -> void:
 		# Handle player death logic here, e.g., respawn or game over
 		# For now, just reset health for demonstration purposes
 		current_health = max_health
-		print("Player respawned with full health.")
+		print("Player respawned with full health.") 
