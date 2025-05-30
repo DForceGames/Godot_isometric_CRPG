@@ -148,7 +148,6 @@ frame_progress = 0.558405
 [node name="PlayerMovement" type="Node2D" parent="."]
 position = Vector2(0, 11)
 script = ExtResource("3_wnvi2")
-speed = 100.0
 
 [node name="WorldPlace" type="CollisionPolygon2D" parent="."]
 position = Vector2(0, 11)
@@ -162,4 +161,5 @@ collision_mask = 16
 [node name="Hitbox" type="CollisionPolygon2D" parent="Hitbox"]
 polygon = PackedVector2Array(-2, -10, 3, -13, -3, -16, -9, -13)
 
+[connection signal="_on_sp_changed" from="." to="PlayerMovement" method="_on_sp_changed"]
 [connection signal="body_entered" from="Hitbox" to="." method="_on_hitbox_body_entered"]

@@ -16,12 +16,17 @@ var defense: int = 5
 var magic_power: int = 15
 var magic_defense: int = 3
 var experience: int = 0
+var max_sp: int = 6
 
 # References
 var game_state_manager
 var movement_system
 var interaction_distance: float = 64.0
 var current_nearby_npc: NPC = null
+
+# Signals
+signal resources_refreshed(current_health, max_health, action_points, max_sp)
+signal _on_sp_changed(current_sp: int)
 
 func _ready() -> void:
 	# Get GameStateManager
@@ -35,15 +40,6 @@ func _ready() -> void:
 		_setup_movement_system()
 	else:
 		printerr("Player: PlayerMovement node not found as a child")
-
-func _setup_movement_system() -> void:
-	# Just initialize with the tilemap
-	if not tilemap_path.is_empty():
-		var tilemap = get_node_or_null(tilemap_path)
-		if tilemap:
-			movement_system.primary_tilemap_layer = tilemap
-			movement_system.speed = speed
-			movement_system.initialize_grid()
 
 func _input(event: InputEvent) -> void:
 	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
@@ -62,6 +58,17 @@ func _input(event: InputEvent) -> void:
 	else:
 		# Move to clicked position
 		move_to_position(get_global_mouse_position())
+
+# Movement and animation -------------------------------------------------------------
+
+func _setup_movement_system() -> void:
+	# Just initialize with the tilemap
+	if not tilemap_path.is_empty():
+		var tilemap = get_node_or_null(tilemap_path)
+		if tilemap:
+			movement_system.primary_tilemap_layer = tilemap
+			movement_system.speed = speed
+			movement_system.initialize_grid()
 
 # Simple function to tell movement system where to go
 func move_to_position(target_pos: Vector2) -> void:
@@ -85,15 +92,36 @@ func _physics_process(_delta: float) -> void:
 
 # Follow the path provided by movement_system
 func follow_path() -> void:
+	# If we have no points left, stop
+	if movement_system.path.size() == 0:
+		velocity = Vector2.ZERO
+		return
+		
 	var next_point = movement_system.path[0]
 	var distance = global_position.distance_to(next_point)
+	
+	# If we're in turn-based mode and have no SP left, stop movement
+	if movement_system.is_turn_based_mode() and movement_system.current_sp <= 0 and movement_system.path.size() > 1:
+		movement_system.path = [next_point]  # Keep only current target
+		movement_system.emit_signal("step_taken", 0)  # Signal no more steps
 	
 	# Reached waypoint?
 	if distance < 5.0:
 		movement_system.path.remove_at(0)
+		
+		# If in turn-based mode, reduce SP for each waypoint reached
+		if movement_system.is_turn_based_mode() and movement_system.path.size() > 0:
+			movement_system.current_sp -= 1
+			movement_system.emit_signal("step_taken", movement_system.current_sp)
+			
+			# If SP is now 0, we can only move to the next waypoint then must stop
+			if movement_system.current_sp <= 0:
+				movement_system.path = [movement_system.path[0]]  # Keep only next waypoint
+		
 		if movement_system.path.is_empty():
 			velocity = Vector2.ZERO
 			return
+			
 		next_point = movement_system.path[0]
 	
 	# Move toward next point
@@ -130,6 +158,8 @@ func _on_game_mode_changed(new_mode) -> void:
 	var anim_sprite = $AnimatedSprite2D
 	if anim_sprite and velocity == Vector2.ZERO:
 		anim_sprite.play("idle")
+
+# Interaction Functions ------------------------------------------------------------------------
 
 func get_interactable_at_mouse_position() -> Node:
 	var mouse_pos = get_global_mouse_position()
@@ -183,3 +213,18 @@ func end_npc_interaction() -> void:
 	if current_nearby_npc and current_nearby_npc.has_method("end_interaction"):
 		current_nearby_npc.end_interaction()
 		current_nearby_npc = null
+
+# Resouces -------------------------------------------------------------------------------------
+
+func refresh_resources() -> void:
+	
+	# Reset any other resources as needed
+	print("Player resources refreshed")
+	
+	# Optionally reset inventory or other game state
+	# if game_state_manager:
+	# 	game_state_manager.refresh_inventory()
+
+	if movement_system:
+		movement_system.current_sp = max_sp
+		emit_signal("_on_sp_changed", movement_system.current_sp)

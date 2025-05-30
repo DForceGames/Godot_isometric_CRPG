@@ -18,8 +18,8 @@ func _on_button_pressed() -> void:
 		printerr("RefreshButton: Player node not found at path: ", player_node_path)
 		return
 
-	if player_node.has_method("Refresh_resources"):
-		player_node.Refresh_resources()
+	if player_node.has_method("refresh_resources"):
+		player_node.refresh_resources()
 		print("RefreshButton: Called Refresh_resources on player.")
 	else:
 		printerr("RefreshButton: Player node does not have Refresh_resources method.")

@@ -32,6 +32,17 @@ y_sort_enabled = true
 tile_map_data = PackedByteArray("AAAQAPv/AQADAAMAAQANAAUAAQADAAEAAAAVAAUAAQADAAEAAAAVAP3/AQADAAEAAAANAP3/AQADAAEAAAAQAP7/AQACAAIAAAA=")
 tile_set = ExtResource("1_ux3er")
 
+[node name="Harold" parent="Floor/Obstacle_1" instance=ExtResource("8_166p4")]
+y_sort_enabled = true
+position = Vector2(320, 305)
+
+[node name="Chest" parent="Floor/Obstacle_1" instance=ExtResource("10_e0egg")]
+position = Vector2(483, 413)
+
+[node name="Bomb" parent="Floor/Obstacle_1" groups=["Container"] instance=ExtResource("7_y0ld0")]
+position = Vector2(480, 303)
+script = null
+
 [node name="Player" parent="Floor/Obstacle_1" instance=ExtResource("2_75as7")]
 position = Vector2(385, 354)
 tilemap_path = NodePath("../../Ground_1")
@@ -51,6 +62,7 @@ offset_right = 557.0
 offset_bottom = 305.0
 text = " Refresh SP"
 script = ExtResource("4_7skvm")
+player_node_path = NodePath("../../Floor/Obstacle_1/Player")
 metadata/_edit_use_anchors_ = true
 
 [node name="Button2" type="Button" parent="Camera2D"]
@@ -74,14 +86,3 @@ battle_maps_folder_path = "res://maps/"
 position = Vector2(8, 0)
 shape = SubResource("CircleShape2D_egu6l")
 disabled = true
-
-[node name="Bomb" parent="." instance=ExtResource("7_y0ld0")]
-position = Vector2(-92, -12)
-script = null
-
-[node name="Harold" parent="." instance=ExtResource("8_166p4")]
-y_sort_enabled = true
-position = Vector2(-252, -10)
-
-[node name="Chest" parent="." instance=ExtResource("10_e0egg")]
-position = Vector2(-89, 98)
