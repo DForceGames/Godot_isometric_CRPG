@@ -1,0 +1,65 @@
+[gd_scene load_steps=10 format=3 uid="uid://ctdtp8kbpjoox"]
+
+[ext_resource type="PackedScene" uid="uid://dwiis8m86ubcj" path="res://npc/standard_npc.tscn" id="1_ol8cq"]
+[ext_resource type="Script" uid="uid://bso3c16h781kf" path="res://scripts/npc/friendly_npc/harold.gd" id="2_07r4p"]
+[ext_resource type="Texture2D" uid="uid://c4onupwgjpf8n" path="res://images/Owlet_Monster_Idle_4.png" id="2_viiot"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_07r4p"]
+atlas = ExtResource("2_viiot")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_13uuu"]
+atlas = ExtResource("2_viiot")
+region = Rect2(32, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s7i0u"]
+atlas = ExtResource("2_viiot")
+region = Rect2(64, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_2umeo"]
+atlas = ExtResource("2_viiot")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_viiot"]
+atlas = ExtResource("2_viiot")
+region = Rect2(96, 0, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_wcic0"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_07r4p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_13uuu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s7i0u")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_2umeo")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_viiot")
+}],
+"loop": true,
+"name": &"Talking",
+"speed": 5.0
+}]
+
+[node name="Harold" instance=ExtResource("1_ol8cq")]
+script = ExtResource("2_07r4p")
+npc_name = "Harold"
+npc_id = "1"
+health = 10000
+max_health = 10000
+
+[node name="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = SubResource("SpriteFrames_wcic0")
+animation = &"Talking"
+autoplay = "Idle"

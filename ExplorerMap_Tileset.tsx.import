@@ -1,0 +1,15 @@
+[remap]
+
+importer="naddys.tiled_tileset"
+type="TileSet"
+uid="uid://p62yrlttdyn2"
+path="res://.godot/imported/ExplorerMap_Tileset.tsx-87e27169788a6994ec3078e2276b21ba.res"
+
+[deps]
+
+source_file="res://ExplorerMap_Tileset.tsx"
+dest_files=["res://.godot/imported/ExplorerMap_Tileset.tsx-87e27169788a6994ec3078e2276b21ba.res"]
+
+[params]
+
+contains_collisions=false

@@ -1,0 +1,73 @@
+[gd_scene load_steps=11 format=3 uid="uid://ih5nrtcmmq0u"]
+
+[ext_resource type="Script" uid="uid://by3amks40u2c0" path="res://scripts/containers/chest.gd" id="1_rt5xj"]
+[ext_resource type="Texture2D" uid="uid://o6phr3cefere" path="res://images/Characters/Boar/boar_SW_idle_strip.png" id="1_xchky"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rt5xj"]
+atlas = ExtResource("1_xchky")
+region = Rect2(0, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3ku8h"]
+atlas = ExtResource("1_xchky")
+region = Rect2(41, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_576mf"]
+atlas = ExtResource("1_xchky")
+region = Rect2(82, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0mxks"]
+atlas = ExtResource("1_xchky")
+region = Rect2(123, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wpkg2"]
+atlas = ExtResource("1_xchky")
+region = Rect2(164, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_da58p"]
+atlas = ExtResource("1_xchky")
+region = Rect2(205, 0, 41, 25)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_i68v3"]
+atlas = ExtResource("1_xchky")
+region = Rect2(246, 0, 41, 25)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_ywhvo"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rt5xj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3ku8h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_576mf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0mxks")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wpkg2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_da58p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_i68v3")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 5.0
+}]
+
+[node name="Chest" type="StaticBody2D" groups=["Container", "Containers"]]
+script = ExtResource("1_rt5xj")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(-4, -19)
+sprite_frames = SubResource("SpriteFrames_ywhvo")
+animation = &"Idle"
+frame_progress = 0.838513
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -16, -13)

@@ -1,0 +1,633 @@
+extends Node
+
+## Base movement system for the player character
+## Handles pathfinding and actual movement execution for both real-time and turn-based modes
+
+# Movement configuration
+@export var speed: float = 100.0
+@export var snap_distance: float = 5.0
+@export var y_offset: float = 16.0 # For isometric view, to sink player visually
+
+# Node dependencies
+@export var player: CharacterBody2D 
+var primary_tilemap_layer: TileMapLayer
+var ground_layers: Array[TileMapLayer] = []
+var obstacle_layers: Array[TileMapLayer] = []
+
+# Pathfinding
+var astar_grid: AStarGrid2D
+enum MovementPhase { IDLE, FOLLOWING_PATH }
+var current_phase = MovementPhase.IDLE
+var current_path: Array[Vector2i] = []
+var current_path_index: int = 0
+
+# Position targets
+var final_target_world_position: Vector2
+var current_step_target_world_position: Vector2
+
+# Reference to GameStateManager
+var game_state_manager: Node
+
+# Signals
+signal path_completed
+signal movement_started
+signal step_taken(remaining_steps: int)
+signal sp_changed(new_sp: int)
+
+# Player resources
+var sp: int = 4 # Step Points - limited movement resource in turn-based mode
+
+# Debug visualization control
+@export var debug_draw_path: bool = false
+@export var debug_draw_weights: bool = false
+@export var debug_color: Color = Color(0, 1, 0, 0.5) # Default: semi-transparent green
+
+# For debug visualization
+var debug_node: PathfindingDebug = null
+
+func _ready() -> void:
+	if not player:
+		player = get_parent() as CharacterBody2D
+		if not player:
+			printerr("PlayerMovement: Parent is not a CharacterBody2D. Movement system needs to be a child of the player.")
+			set_process(false)
+			set_physics_process(false)
+			return
+			
+	final_target_world_position = player.global_position
+	current_step_target_world_position = player.global_position
+	
+	# Get the GameStateManager singleton
+	game_state_manager = get_node_or_null("/root/GameStateManager")
+	if not game_state_manager:
+		printerr("PlayerMovement: GameStateManager autoload not found.")
+		
+	# Create debug visualization if enabled
+	if debug_draw_path or debug_draw_weights:
+		_create_debug_node()
+
+func initialize(p_tilemap: TileMapLayer, p_ground_layers: Array, p_obstacle_layers: Array) -> void:
+	"""Initialize the movement system with required tilemap references"""
+	primary_tilemap_layer = p_tilemap
+	ground_layers = p_ground_layers
+	obstacle_layers = p_obstacle_layers
+	_initialize_astar()
+	
+func _initialize_astar() -> void:
+	astar_grid = AStarGrid2D.new()
+	
+	# Determine map bounds by combining the used_rects of all layers
+	var map_rect = Rect2i()
+	if not ground_layers.is_empty():
+		map_rect = ground_layers[0].get_used_rect()
+		for i in range(1, ground_layers.size()):
+			map_rect = map_rect.merge(ground_layers[i].get_used_rect())
+		for obstacle_layer in obstacle_layers:
+			map_rect = map_rect.merge(obstacle_layer.get_used_rect())
+	else:
+		printerr("PlayerMovement: Cannot initialize AStar: No ground layers to determine map bounds.")
+		return
+
+	if map_rect.size.x == 0 or map_rect.size.y == 0:
+		print("PlayerMovement: TileMap appears to be empty or very small. Used rect: ", map_rect)
+		astar_grid.region = Rect2i(0,0,1,1) # Default small region to avoid errors
+	else:
+		astar_grid.region = map_rect
+	
+	# Configure astar grid properties
+	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER # 4-directional movement
+	astar_grid.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
+	astar_grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
+	astar_grid.update()
+
+	# Track obstacle tiles for edge weighting
+	var obstacle_tiles = []
+	
+	# First pass: Mark unwalkable cells as solid
+	var solid_points_count = 0
+	for y in range(map_rect.position.y, map_rect.end.y):
+		for x in range(map_rect.position.x, map_rect.end.x):
+			var cell = Vector2i(x, y)
+			if not _is_cell_walkable(cell):
+				astar_grid.set_point_solid(cell, true)
+				obstacle_tiles.append(cell)
+				solid_points_count += 1
+	
+	# Second pass: Add movement cost to cells adjacent to obstacles
+	# This makes the pathfinding prefer routes away from obstacles
+	for obstacle in obstacle_tiles:
+		for dir in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
+			var adjacent = obstacle + dir
+			if astar_grid.region.has_point(adjacent) and not astar_grid.is_point_solid(adjacent):
+				# Higher cost near obstacles to encourage paths away from them
+				astar_grid.set_point_weight_scale(adjacent, 2.5) 
+			
+	print("PlayerMovement: AStar grid initialized. Region: ", astar_grid.region, 
+	      ". Total solid points set: ", solid_points_count)
+	      
+	# Update debug visualization
+	_update_debug_visualization()
+
+func _is_cell_walkable(map_coords: Vector2i) -> bool:
+	# Check if there's at least one ground tile on any ground layer
+	var has_ground_tile_on_any_ground_layer = false
+	for ground_layer in ground_layers:
+		if ground_layer.get_cell_source_id(map_coords) != -1:
+			has_ground_tile_on_any_ground_layer = true
+			break
+	if not has_ground_tile_on_any_ground_layer:
+		return false # Must have a ground tile on at least one ground layer
+
+	# Check for collision on ground layers
+	for ground_layer in ground_layers:
+		var source_id = ground_layer.get_cell_source_id(map_coords)
+		if source_id != -1:
+			var tile_data: TileData = ground_layer.get_cell_tile_data(map_coords)
+			if tile_data and tile_data.get_collision_polygons_count(0) > 0:
+				return false # Cell has a collision shape on a ground layer
+	
+	# Check for collision on obstacle layers
+	for obstacle_layer in obstacle_layers:
+		var source_id = obstacle_layer.get_cell_source_id(map_coords)
+		if source_id != -1:
+			var tile_data: TileData = obstacle_layer.get_cell_tile_data(map_coords)
+			if tile_data and tile_data.get_collision_polygons_count(0) > 0:
+				return false # Cell has a collision shape on an obstacle layer
+	
+	return true
+
+func handle_input(event: InputEvent) -> void:
+	"""Central input handler - delegates to mode-specific handlers"""
+	if not primary_tilemap_layer or not astar_grid or not player:
+		return
+		
+	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
+		return
+		
+	if is_turn_based_mode():
+		_handle_turn_based_input(event)
+	else:
+		_handle_real_time_input(event)
+
+func _handle_turn_based_input(event: InputEvent) -> void:
+	# Get world coordinates for mouse click and player position
+	var mouse_pos = player.get_global_mouse_position()
+	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
+	var clicked_cell = primary_tilemap_layer.local_to_map(local_mouse_pos)
+
+	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position - Vector2(0, y_offset))
+	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
+
+	# Validate clicked cell
+	if not astar_grid.region.has_point(clicked_cell):
+		print("PlayerMovement: Clicked out of bounds: ", clicked_cell)
+		return
+		
+	# For unwalkable tiles, find nearest walkable tile
+	if astar_grid.is_point_solid(clicked_cell):
+		print("PlayerMovement: Clicked on unwalkable tile, finding nearest walkable tile")
+		clicked_cell = find_nearest_walkable_tile(clicked_cell)
+		
+	if not astar_grid.region.has_point(current_map_coords):
+		print("PlayerMovement: Current position is out of A* bounds: ", current_map_coords)
+		return
+
+	# Use advanced pathfinding
+	var new_path = find_path_around_obstacles(current_map_coords, clicked_cell)
+
+	if new_path.size() <= 1: # No path found
+		print("PlayerMovement: No valid path found or target is current location. Path size: ", new_path.size())
+		_reset_path()
+		return
+
+	# TURN-BASED MODE: SP matters
+	if sp <= 0:
+		print("PlayerMovement (Turn-Based): No SP left to move.")
+		_reset_path()
+		return
+
+	var num_steps_in_full_path = new_path.size() - 1
+	var steps_to_take = min(num_steps_in_full_path, sp)
+
+	if steps_to_take <= 0: 
+		print("PlayerMovement (Turn-Based): Calculated steps to take is zero or less. Path size: ", new_path.size(), ", SP: ", sp)
+		_reset_path()
+		return
+	
+	# Take only the steps we can afford with our SP
+	current_path = new_path.slice(0, steps_to_take + 1)
+	sp -= steps_to_take
+	print("PlayerMovement (Turn-Based): Path initiated. Taking ", steps_to_take, " steps. SP consumed: ", steps_to_take, ". SP remaining: ", sp)
+	emit_signal("sp_changed", sp)
+	
+	_start_following_path()
+
+func _handle_real_time_input(event: InputEvent) -> void:
+	# Get world coordinates for mouse click and player position
+	var mouse_pos = player.get_global_mouse_position()
+	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
+	var clicked_cell = primary_tilemap_layer.local_to_map(local_mouse_pos)
+
+	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position - Vector2(0, y_offset))
+	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
+
+	# Validate clicked cell
+	if not astar_grid.region.has_point(clicked_cell):
+		print("PlayerMovement: Clicked out of bounds: ", clicked_cell)
+		return
+		
+	# For unwalkable tiles, find nearest walkable tile
+	if astar_grid.is_point_solid(clicked_cell):
+		print("PlayerMovement: Clicked on unwalkable tile, finding nearest walkable tile")
+		clicked_cell = find_nearest_walkable_tile(clicked_cell)
+		
+	if not astar_grid.region.has_point(current_map_coords):
+		print("PlayerMovement: Current position is out of A* bounds: ", current_map_coords)
+		return
+
+	# Use advanced pathfinding
+	var new_path = find_path_around_obstacles(current_map_coords, clicked_cell)
+
+	if new_path.size() <= 1: # No path found
+		print("PlayerMovement: No valid path found or target is current location. Path size: ", new_path.size())
+		_reset_path()
+		return
+
+	# REAL-TIME MODE: Take the full path
+	var num_steps_in_full_path = new_path.size() - 1
+	if num_steps_in_full_path <= 0:
+		print("PlayerMovement (Real-Time): Path is zero or less steps. Path size: ", new_path.size())
+		_reset_path()
+		return
+	
+	current_path = new_path # Take the full path
+	print("PlayerMovement (Real-Time): Path initiated. Taking ", num_steps_in_full_path, " steps. SP not consumed.")
+	
+	_start_following_path()
+
+func _start_following_path() -> void:
+	"""Initialize path following with the current path"""
+	current_path_index = 0
+	current_phase = MovementPhase.FOLLOWING_PATH
+	emit_signal("movement_started")
+	
+	var last_map_coord = current_path[current_path.size() - 1]
+	final_target_world_position = primary_tilemap_layer.map_to_local(last_map_coord) + Vector2(0, y_offset)
+	final_target_world_position = primary_tilemap_layer.to_global(final_target_world_position)
+	
+	var next_map_coord = current_path[current_path_index] # This is the starting point of the path
+	current_step_target_world_position = primary_tilemap_layer.map_to_local(next_map_coord) + Vector2(0, y_offset)
+	current_step_target_world_position = primary_tilemap_layer.to_global(current_step_target_world_position)
+
+	# Update debug visualization
+	_update_debug_visualization()
+
+func _reset_path() -> void:
+	"""Reset path and movement state"""
+	current_path.clear()
+	current_path_index = 0
+	current_phase = MovementPhase.IDLE
+	
+	# Update debug visualization
+	_update_debug_visualization()
+
+func process_movement() -> Vector2:
+	"""Process movement and return the calculated velocity for the player"""
+	if not player:
+		return Vector2.ZERO
+	
+	if is_turn_based_mode():
+		return _process_turn_based_movement()
+	else:
+		return _process_real_time_movement()
+
+func _process_turn_based_movement() -> Vector2:
+	# In turn-based mode, stop player movement and ensure idle animation
+	if player.velocity != Vector2.ZERO:
+		return Vector2.ZERO
+	
+	# In the future, this could handle animated movement between grid cells when it's the player's turn
+	return Vector2.ZERO
+
+func _process_real_time_movement() -> Vector2:
+	if current_phase == MovementPhase.IDLE:
+		# Snap to final target if close enough
+		if player.global_position.distance_squared_to(final_target_world_position) < snap_distance * snap_distance:
+			if player.global_position != final_target_world_position:
+				player.global_position = final_target_world_position
+		return Vector2.ZERO
+
+	elif current_phase == MovementPhase.FOLLOWING_PATH:
+		if current_path.is_empty() or current_path_index >= current_path.size():
+			current_phase = MovementPhase.IDLE
+			player.global_position = final_target_world_position # Snap to the final destination
+			print("PlayerMovement: Path completed or invalid.")
+			emit_signal("path_completed")
+			return Vector2.ZERO
+	
+		if player.global_position.distance_squared_to(current_step_target_world_position) < snap_distance * snap_distance:
+			player.global_position = current_step_target_world_position # Snap to current waypoint
+			current_path_index += 1
+			emit_signal("step_taken", current_path.size() - current_path_index)
+
+			if current_path_index >= current_path.size():
+				current_phase = MovementPhase.IDLE
+				player.global_position = final_target_world_position # Ensure snapped to final target
+				print("PlayerMovement: Reached end of path.")
+				emit_signal("path_completed")
+				return Vector2.ZERO
+			else:
+				# Set next waypoint
+				var next_map_coord = current_path[current_path_index]
+				current_step_target_world_position = primary_tilemap_layer.map_to_local(next_map_coord) + Vector2(0, y_offset)
+				current_step_target_world_position = primary_tilemap_layer.to_global(current_step_target_world_position)
+				# Calculate velocity for next segment immediately
+				return player.global_position.direction_to(current_step_target_world_position) * speed
+		else:
+			# Move towards current waypoint
+			return player.global_position.direction_to(current_step_target_world_position) * speed
+	
+	return Vector2.ZERO
+
+func refresh_resources() -> void:
+	"""Reset step points and other movement resources"""
+	sp = 4 # Reset to default value
+	emit_signal("sp_changed", sp)
+	print("PlayerMovement: Resources refreshed. SP set to: ", sp)
+
+func handle_game_mode_changed(new_mode) -> void:
+	"""React to game mode changes"""
+	if is_turn_based_mode():
+		print("PlayerMovement: Switched to TURN_BASED mode.")
+		# Stop any current movement immediately
+		current_phase = MovementPhase.IDLE
+		
+	else: # REAL_TIME mode
+		print("PlayerMovement: Switched to REAL_TIME mode.")
+
+func is_turn_based_mode() -> bool:
+	"""Check if we're currently in turn-based mode"""
+	if game_state_manager:
+		return game_state_manager.is_turn_based()
+	return false
+	
+func cancel_current_movement() -> void:
+	"""Cancel any ongoing movement"""
+	if current_phase == MovementPhase.FOLLOWING_PATH:
+		_reset_path()
+		
+func get_remaining_sp() -> int:
+	"""Get the current SP value"""
+	return sp
+
+func set_sp(new_value: int) -> void:
+	"""Set SP to a specific value"""
+	sp = new_value
+	emit_signal("sp_changed", sp)
+	
+func get_tile_size() -> float:
+	"""Get the approximate tile size based on primary tilemap"""
+	if primary_tilemap_layer and primary_tilemap_layer.tile_set:
+		var tile_size = primary_tilemap_layer.tile_set.tile_size
+		return min(tile_size.x, tile_size.y)  # Return smallest dimension to be safe
+	return 32.0  # Default fallback size
+	
+func set_target_position(pos: Vector2) -> void:
+	"""Set a specific target position, useful for custom movement like going to an NPC"""
+	if not primary_tilemap_layer or not astar_grid:
+		return
+		
+	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position - Vector2(0, y_offset))
+	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
+	
+	var local_target_pos = primary_tilemap_layer.to_local(pos)
+	var target_map_coords = primary_tilemap_layer.local_to_map(local_target_pos)
+	
+	# Check if target is walkable
+	var is_target_walkable = astar_grid.region.has_point(target_map_coords) and not astar_grid.is_point_solid(target_map_coords)
+	
+	if not is_target_walkable:
+		# Find nearest walkable tile
+		print("PlayerMovement: Target is not walkable, finding nearest walkable tile")
+		target_map_coords = find_nearest_walkable_tile(target_map_coords)
+	
+	# Use advanced pathfinding to find a route, even around obstacles
+	var new_path = find_path_around_obstacles(current_map_coords, target_map_coords)
+	
+	if new_path.size() <= 1:
+		print("PlayerMovement: No valid path to target position even with advanced pathfinding")
+		return
+		
+	# Process path based on current game mode
+	if is_turn_based_mode():
+		# Turn-based mode - limit by SP
+		var steps_to_take = min(new_path.size() - 1, sp)
+		if steps_to_take <= 0:
+			return
+			
+		current_path = new_path.slice(0, steps_to_take + 1)
+		sp -= steps_to_take
+		emit_signal("sp_changed", sp)
+	else:
+		# Real-time mode - take full path
+		current_path = new_path
+	
+	_start_following_path()
+	
+func find_nearest_walkable_tile(map_coords: Vector2i) -> Vector2i:
+	"""Find the nearest walkable tile to the given coordinates"""
+	# Start with the given coordinates
+	var checked = {}
+	var queue = [map_coords]
+	var max_search_distance = 10  # Limit search radius
+	
+	while not queue.is_empty() and max_search_distance > 0:
+		var current = queue.pop_front()
+		
+		if checked.has(current):
+			continue
+			
+		checked[current] = true
+		
+		# Check if this tile is walkable
+		if astar_grid.region.has_point(current) and not astar_grid.is_point_solid(current):
+			return current
+			
+		# Add neighboring tiles to the queue
+		queue.append(Vector2i(current.x + 1, current.y))
+		queue.append(Vector2i(current.x - 1, current.y))
+		queue.append(Vector2i(current.x, current.y + 1))
+		queue.append(Vector2i(current.x, current.y - 1))
+		
+		max_search_distance -= 1
+		
+	# If no walkable tile found, return original (though it's not walkable)
+	return map_coords
+
+func find_path_around_obstacles(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
+	"""Find a path from start to end, trying alternative routes if direct path fails"""
+	if not astar_grid.region.has_point(start) or not astar_grid.region.has_point(end):
+		print("PlayerMovement: Invalid start or end point for pathfinding")
+		return []
+	
+	# Try direct path first
+	var path = astar_grid.get_id_path(start, end)
+	if path.size() > 1:
+		return path
+	
+	print("PlayerMovement: Direct path failed, trying alternative routes")
+	
+	# If direct path failed, try alternative routes via waypoints
+	var waypoints = _find_potential_waypoints(start, end)
+	print("PlayerMovement: Generated ", waypoints.size(), " potential waypoints")
+	
+	for waypoint in waypoints:
+		# Try going through this waypoint
+		var path_to_waypoint = astar_grid.get_id_path(start, waypoint)
+		if path_to_waypoint.size() <= 1:
+			continue # Can't reach waypoint
+		
+		var path_from_waypoint = astar_grid.get_id_path(waypoint, end)
+		if path_from_waypoint.size() <= 1:
+			continue # Can't reach end from waypoint
+		
+		# Combine the two paths (remove duplicate waypoint)
+		path_from_waypoint.remove_at(0)
+		var combined_path = path_to_waypoint + path_from_waypoint
+		print("PlayerMovement: Found path via waypoint ", waypoint, " with length ", combined_path.size())
+		
+		return combined_path
+	
+	# Last resort - find the nearest walkable tile to the destination
+	var nearest_walkable_end = find_nearest_walkable_tile(end)
+	if nearest_walkable_end != end:
+		path = astar_grid.get_id_path(start, nearest_walkable_end)
+		if path.size() > 1:
+			print("PlayerMovement: Found path to nearest walkable tile to destination")
+			return path
+	
+	# Return empty path if all else fails
+	print("PlayerMovement: No path found, even with advanced pathfinding")
+	return []
+
+func _find_potential_waypoints(start: Vector2i, end: Vector2i) -> Array[Vector2i]:
+	"""Generate potential waypoints to path around obstacles"""
+	var waypoints: Array[Vector2i] = []
+	
+	# Calculate the midpoint and direction vector
+	var midpoint = Vector2(start) + (Vector2(end) - Vector2(start)) / 2
+	var midpoint_cell = Vector2i(roundi(midpoint.x), roundi(midpoint.y))
+	
+	# Direction vector from start to end
+	var dir = Vector2(end - start)
+	
+	# Get perpendicular vectors for potential waypoints
+	var perp1 = Vector2(-dir.y, dir.x).normalized()
+	var perp2 = Vector2(dir.y, -dir.x).normalized()
+	
+	# Try multiple distance points along both perpendicular vectors
+	for distance in [3, 5, 8, 12]:
+		for perp_dir in [perp1, perp2]:
+			var waypoint_pos = midpoint + perp_dir * distance
+			var waypoint_cell = Vector2i(roundi(waypoint_pos.x), roundi(waypoint_pos.y))
+			
+			# Check if this is a valid and walkable tile
+			if astar_grid.region.has_point(waypoint_cell) and not astar_grid.is_point_solid(waypoint_cell):
+				waypoints.append(waypoint_cell)
+	
+	# Also try points ahead and behind the obstacle
+	var dir_normalized = dir.normalized()
+	for distance in [3, 6]:
+		# Try point ahead of obstacle
+		var ahead_pos = Vector2(end) + dir_normalized * distance
+		var ahead_cell = Vector2i(roundi(ahead_pos.x), roundi(ahead_pos.y))
+		if astar_grid.region.has_point(ahead_cell) and not astar_grid.is_point_solid(ahead_cell):
+			waypoints.append(ahead_cell)
+			
+		# Try point behind obstacle
+		var behind_pos = Vector2(start) - dir_normalized * distance
+		var behind_cell = Vector2i(roundi(behind_pos.x), roundi(behind_pos.y))
+		if astar_grid.region.has_point(behind_cell) and not astar_grid.is_point_solid(behind_cell):
+			waypoints.append(behind_cell)
+	
+	return waypoints
+
+func _draw() -> void:
+	"""Debug visualization of path and weighted cells"""
+	if not primary_tilemap_layer or not debug_draw_path and not debug_draw_weights:
+		return
+	
+	# Draw weighted cells (areas near obstacles)
+	if debug_draw_weights and not _debug_weighted_cells.is_empty():
+		var weight_color = Color(1, 0.5, 0, 0.3) # Orange
+		for cell in _debug_weighted_cells:
+			var world_pos = primary_tilemap_layer.map_to_local(cell)
+			world_pos = primary_tilemap_layer.to_global(world_pos) - global_position
+			var tile_size = get_tile_size()
+			var rect_size = Vector2(tile_size, tile_size)
+			draw_rect(Rect2(world_pos - rect_size / 2, rect_size), weight_color, true)
+	
+	# Draw current path
+	if debug_draw_path and not _debug_path_points.is_empty():
+		# Draw path line
+		for i in range(_debug_path_points.size() - 1):
+			var start_pos = _debug_path_points[i] - global_position
+			var end_pos = _debug_path_points[i + 1] - global_position
+			draw_line(start_pos, end_pos, debug_color, 2.0)
+			
+		# Draw waypoint circles
+		for point in _debug_path_points:
+			var pos = point - global_position
+			draw_circle(pos, 3.0, debug_color)
+
+func _create_debug_node() -> void:
+	"""Create the debug visualization node"""
+	if (debug_draw_path or debug_draw_weights) and not debug_node and player:
+		# Load the debug visualization script
+		var debug_script = load("res://scripts/player/pathfinding_debug.gd")
+		if debug_script:
+			debug_node = Node2D.new()
+			debug_node.set_script(debug_script)
+			debug_node.name = "PathfindingDebug"
+			debug_node.path_color = debug_color
+			player.add_child(debug_node)
+			
+			if primary_tilemap_layer:
+				debug_node.set_tilemap(primary_tilemap_layer, get_tile_size(), y_offset)
+				
+			print("PlayerMovement: Created pathfinding debug visualization")
+
+func _update_debug_visualization() -> void:
+	"""Update debug visualization data"""
+	# Create debug node if needed and missing
+	if (debug_draw_path or debug_draw_weights) and not debug_node:
+		_create_debug_node()
+		
+	if not debug_node:
+		return
+		
+	# Make sure debug node has the correct tilemap
+	if primary_tilemap_layer and debug_node.tilemap_layer != primary_tilemap_layer:
+		debug_node.set_tilemap(primary_tilemap_layer, get_tile_size(), y_offset)
+		
+	var path_points = []
+	if debug_draw_path and not current_path.is_empty() and primary_tilemap_layer:
+		# Convert grid coordinates to world coordinates
+		for map_coord in current_path:
+			var world_pos = primary_tilemap_layer.map_to_local(map_coord) + Vector2(0, y_offset)
+			world_pos = primary_tilemap_layer.to_global(world_pos)
+			path_points.append(world_pos)
+		
+	debug_node.update_path(path_points)
+	
+	var weighted_cells = []
+	if debug_draw_weights and astar_grid:
+		# Collect weighted cells
+		for y in range(astar_grid.region.position.y, astar_grid.region.end.y):
+			for x in range(astar_grid.region.position.x, astar_grid.region.end.x):
+				var cell = Vector2i(x, y)
+				if astar_grid.region.has_point(cell) and not astar_grid.is_point_solid(cell):
+					if astar_grid.get_point_weight_scale(cell) > 1.1:
+						weighted_cells.append(cell)
+	
+	debug_node.update_weights(weighted_cells)

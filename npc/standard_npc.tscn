@@ -1,0 +1,31 @@
+[gd_scene load_steps=5 format=3 uid="uid://dwiis8m86ubcj"]
+
+[ext_resource type="Script" uid="uid://b3y1taoi4f0ls" path="res://scripts/npc/npc.gd" id="1_43cwa"]
+[ext_resource type="Texture2D" uid="uid://c4onupwgjpf8n" path="res://images/Owlet_Monster_Idle_4.png" id="2_nab3y"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_43cwa"]
+atlas = ExtResource("2_nab3y")
+region = Rect2(0, 0, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_43cwa"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_43cwa")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="CharacterBody2D" type="CharacterBody2D" groups=["NPC"]]
+process_mode = 3
+script = ExtResource("1_43cwa")
+visual_representation = NodePath("AnimatedSprite2D")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_43cwa")
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+position = Vector2(1, 25)
+polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -13, -12)
