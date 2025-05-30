@@ -1,4 +1,3 @@
-class_name BattleManager
 
 func _ready():
     # Initialize battle manager
