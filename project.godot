@@ -39,6 +39,7 @@ enabled=PackedStringArray("res://addons/GDScript/addons/YATI/plugin.cfg")
 Enemy="Enemy's in the combat scene"
 NPC="Friendly or neutral NPC's"
 Container="Container for items"
+Solid="Pillars, Walls and other not movable items"
 
 [importer_defaults]
 
