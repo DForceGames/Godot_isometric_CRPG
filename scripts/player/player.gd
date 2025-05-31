@@ -18,13 +18,6 @@ var magic_defense: int = 3
 var experience: int = 0
 var max_sp: int = 6
 
-# Movement
-var last_tile_middle:
-	get:
-		if movement_system and movement_system.has_method("snapped_end"):
-			return movement_system.snapped_end()
-		return null
-
 # References
 var game_state_manager
 var movement_system
