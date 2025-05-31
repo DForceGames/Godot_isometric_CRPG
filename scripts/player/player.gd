@@ -81,7 +81,7 @@ func _setup_movement_system() -> void:
 func move_to_position(target_pos: Vector2) -> void:
 	if not movement_system:
 		return
-		
+	
 	movement_system.start = global_position
 	movement_system.end = target_pos
 	movement_system.get_ideal_path()
@@ -126,7 +126,8 @@ func follow_path() -> void:
 				movement_system.path = [movement_system.path[0]]  # Keep only next waypoint
 		
 		if movement_system.path.is_empty():
-			global_position = next_point
+			if game_state_manager and game_state_manager.is_turn_based():
+				global_position = next_point
 			velocity = Vector2.ZERO
 			return
 			

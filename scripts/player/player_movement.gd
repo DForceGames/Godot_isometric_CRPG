@@ -36,9 +36,6 @@ var start = Vector2.ZERO
 var end = Vector2.ZERO
 var path = []
 
-# Debug variable to track NPC ID
-var npc_id = 0
-
 # Turn-based movement variables
 @export var turn_based_tile_highlight_color: Color = Color(0.2, 0.8, 0.3, 0.5)
 @export var turn_based_path_highlight_color: Color = Color(0.3, 0.6, 0.9, 0.4)
@@ -114,6 +111,16 @@ func _enter_tree() -> void:
 	add_child(movement_range_indicator)
 	movement_range_indicator.visible = false
 
+func get_realtime_path() -> Array[Vector2]:
+	# This function is a placeholder for real-time pathfinding logic
+	# In real-time mode, we might not need a path at all, just move directly
+	if primary_tilemap_layer == null:
+		print("Cannot find path: No primary_tilemap_layer set")
+		return []
+	
+	# For now, return an empty path
+	return []
+
 func get_ideal_path():
 	if start == end:
 		return []
@@ -138,8 +145,8 @@ func get_ideal_path():
 	# Snap start and end positions to tile centers
 	var snapped_start = snap_to_tile(start)
 	var snapped_end = snap_to_tile(end)
-		
-	# Convert world coordinates to grid coordinates
+
+	# Convert world coordinates to grid coordinates	
 	var start_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_start))
 	var end_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_end))
 	
@@ -150,8 +157,7 @@ func get_ideal_path():
 	if not grid_size.has_point(start_cell) or not grid_size.has_point(end_cell):
 		print("Start or end position out of grid bounds")
 		return []
-
-	# Get path using grid coordinates
+		# Get path using grid coordinates
 	var id_path = astar_grid.get_id_path(start_cell, end_cell)
 	
 	if id_path.is_empty():
@@ -205,9 +211,8 @@ func snap_all_entities_to_grid() -> void:
 		return
 		
 	# Snap the player if available
-	var player = get_tree().get_nodes_in_group("Player")
-	if player.size() > 0:
-		snap_entity_to_tile(player[0])
+	if is_instance_valid(player):
+		snap_entity_to_tile(player)
 		
 	print("Snapped all entities to grid")
 
