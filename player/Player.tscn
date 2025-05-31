@@ -1,8 +1,8 @@
 [gd_scene load_steps=21 format=3 uid="uid://dphi76mlubcvm"]
 
-[ext_resource type="Script" uid="uid://bbfunwmu8xikj" path="res://scripts/player/player.gd" id="1_3c3w1"]
+[ext_resource type="Script" uid="uid://bbfunwmu8xikj" path="res://player/scripts/player.gd" id="1_wnvi2"]
 [ext_resource type="Texture2D" uid="uid://cgtkrwpoidwwc" path="res://player/player.png" id="2_3c3w1"]
-[ext_resource type="Script" uid="uid://ctsop7f7pi3g4" path="res://scripts/player/player_movement.gd" id="3_wnvi2"]
+[ext_resource type="Script" uid="uid://ctsop7f7pi3g4" path="res://player/scripts/player_movement.gd" id="3_83hs8"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_wnvi2"]
 atlas = ExtResource("2_3c3w1")
@@ -136,7 +136,7 @@ animations = [{
 
 [node name="Player" type="CharacterBody2D"]
 safe_margin = 0.2
-script = ExtResource("1_3c3w1")
+script = ExtResource("1_wnvi2")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 position = Vector2(0, -20)
@@ -147,7 +147,7 @@ frame_progress = 0.558405
 
 [node name="PlayerMovement" type="Node2D" parent="."]
 position = Vector2(0, 11)
-script = ExtResource("3_wnvi2")
+script = ExtResource("3_83hs8")
 
 [node name="WorldPlace" type="CollisionPolygon2D" parent="."]
 position = Vector2(0, 11)
