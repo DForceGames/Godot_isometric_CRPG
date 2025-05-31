@@ -6,6 +6,7 @@ extends Node
 
 # TileMap references
 var primary_tilemap_layer: TileMapLayer = null
+var tileset: TileSet = null
 
 # References
 var game_state_manager: Node
@@ -17,6 +18,7 @@ var current_phase = MovementPhase.IDLE
 var current_path_index: int = 0
 var final_target_world_position: Vector2
 var current_step_target_world_position: Vector2
+var blocking_groups = ["NPC", "Solid", "Obstacle", "blocking_tilemap", "Container"]
 
 # Player resources
 var current_sp # Step Points - limited movement resource in turn-based mode
@@ -81,6 +83,12 @@ func initialize_grid() -> void:
 		print("Cannot initialize grid: No primary_tilemap_layer set")
 		return
 	
+	if tileset == null:
+		tileset = primary_tilemap_layer.tile_set
+		if tileset == null:
+			print("Cannot initialize grid: No tileset found in primary_tilemap_layer")
+			return
+
 	# Now you can use the primary_tilemap_layer to determine grid size if needed
 	grid_size = Rect2i(Vector2i.ZERO, Vector2i(100, 100))  # Example region, adjust as needed
 	print("Grid initialized with size: ", grid_size)
@@ -92,6 +100,9 @@ func initialize_grid() -> void:
 	astar_grid.update()
 	print("Grid made, isometric: ", astar_grid.default_estimate_heuristic)
 	
+	# Set tiles solid based on groups
+	set_tiles_solid_from_groups()
+
 	# Snap all entities to the grid
 	snap_all_entities_to_grid()
 
@@ -112,9 +123,6 @@ func get_ideal_path():
 		print("Cannot find path: No primary_tilemap_layer set")
 		return []
 	
-	# Define groups that should block pathfinding
-	var blocking_groups = ["NPC", "Solid", "Obstacle", "blocking_tilemap", "Container"]
-	
 	# Check all nodes in the scene for blocking groups
 	for group in blocking_groups:
 		var nodes = get_tree().get_nodes_in_group(group)
@@ -126,7 +134,7 @@ func get_ideal_path():
 				# Only mark if within grid bounds
 				if grid_size.has_point(cell):
 					astar_grid.set_point_solid(cell, true)
-	
+
 	# Snap start and end positions to tile centers
 	var snapped_start = snap_to_tile(start)
 	var snapped_end = snap_to_tile(end)
@@ -233,6 +241,40 @@ func _input(event: InputEvent) -> void:
 		if Input.is_action_pressed("debug_key"):
 			print("Tiled debugview toggled")
 			toggle_debug_view()
+
+func get_tileset() -> TileSet:
+	if primary_tilemap_layer and primary_tilemap_layer.tile_set:
+		return primary_tilemap_layer.tile_set
+	else:
+		print("TileSet not found in primary_tilemap_layer")
+		return null
+
+func set_tiles_solid_from_groups() -> void:
+	if not primary_tilemap_layer or not tileset:
+		print("Cannot set tiles solid: No primary_tilemap_layer or tileset found")
+		return
+	
+	if not astar_grid:
+		print("Cannot set tiles solid: AStarGrid2D not initialized")
+		return
+	
+	var used_cells = primary_tilemap_layer.get_used_cells()
+	var custom_data_layer_name = "Solid" # Custom property to set as solid
+
+	for cell_coords in used_cells:
+		if not astar_grid.region.has_point(cell_coords):
+			continue
+		
+		var tile_data: TileData = primary_tilemap_layer.get_cell_tile_data(cell_coords)
+
+		if tile_data:
+			var is_tile_solid = tile_data.get_custom_data(custom_data_layer_name)
+
+			if typeof(is_tile_solid) == TYPE_BOOL and is_tile_solid == true:
+				print("Tile set as solid at cell: ", cell_coords)
+				astar_grid.set_point_solid(cell_coords, true)
+			else:
+				continue
 
 # Add this to better separate turn-based and real-time input handling
 func _process(_delta: float) -> void:

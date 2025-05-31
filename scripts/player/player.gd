@@ -18,6 +18,13 @@ var magic_defense: int = 3
 var experience: int = 0
 var max_sp: int = 6
 
+# Movement
+var last_tile_middle:
+	get:
+		if movement_system and movement_system.has_method("snapped_end"):
+			return movement_system.snapped_end()
+		return null
+
 # References
 var game_state_manager
 var movement_system
@@ -106,7 +113,7 @@ func follow_path() -> void:
 		movement_system.emit_signal("step_taken", 0)  # Signal no more steps
 	
 	# Reached waypoint?
-	if distance < 5.0:
+	if distance < 1.0:
 		movement_system.path.remove_at(0)
 		
 		# If in turn-based mode, reduce SP for each waypoint reached
@@ -119,6 +126,7 @@ func follow_path() -> void:
 				movement_system.path = [movement_system.path[0]]  # Keep only next waypoint
 		
 		if movement_system.path.is_empty():
+			global_position = next_point
 			velocity = Vector2.ZERO
 			return
 			
