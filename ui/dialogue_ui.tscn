@@ -1,0 +1,42 @@
+[gd_scene load_steps=3 format=3 uid="uid://6fmbusg4dvj5"]
+
+[ext_resource type="Script" uid="uid://cac6e7x4s2uou" path="res://scripts/managers/dialogue_ui.gd" id="1_ianla"]
+[ext_resource type="LabelSettings" uid="uid://cwx70e5v1d8a1" path="res://art_source/Font/dialogue_ui.tres" id="2_u2tjw"]
+
+[node name="DialogueUI" type="Control"]
+process_mode = 3
+z_index = 15
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -2.0
+offset_right = -1152.0
+offset_bottom = -650.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ianla")
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 93.0
+offset_top = 428.0
+offset_right = 1081.0
+offset_bottom = 647.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer"]
+layout_mode = 2
+
+[node name="NPCDialogue" type="Label" parent="PanelContainer/VBoxContainer"]
+custom_minimum_size = Vector2(800, 75)
+layout_mode = 2
+label_settings = ExtResource("2_u2tjw")
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="OptionsContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="OptionTemplate" type="Button" parent="PanelContainer/VBoxContainer/OptionsContainer"]
+visible = false
+layout_mode = 2

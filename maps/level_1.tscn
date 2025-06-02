@@ -1,15 +1,15 @@
 [gd_scene load_steps=12 format=4 uid="uid://bdftrrw0puxyp"]
 
 [ext_resource type="TileSet" uid="uid://bjr5msi1qddm0" path="res://TileSets/Tiled.tres" id="1_ux3er"]
-[ext_resource type="PackedScene" uid="uid://dphi76mlubcvm" path="res://player/Player.tscn" id="2_75as7"]
+[ext_resource type="PackedScene" uid="uid://dphi76mlubcvm" path="res://actors/player/Player.tscn" id="2_75as7"]
 [ext_resource type="Script" uid="uid://s7lcs0wb1pjk" path="res://maps/camera.gd" id="3_efco1"]
 [ext_resource type="Script" uid="uid://bn0vocm6g3goc" path="res://scripts/refresh_button.gd" id="4_7skvm"]
 [ext_resource type="Script" uid="uid://3d2cyyls43hj" path="res://scripts/toggle_gamemode_button.gd" id="5_yrkou"]
 [ext_resource type="Script" uid="uid://blfd1agja6qem" path="res://scripts/change_to_battle.gd" id="6_egu6l"]
-[ext_resource type="PackedScene" uid="uid://cje1icwhrle3f" path="res://scenes/bomb.tscn" id="7_y0ld0"]
-[ext_resource type="PackedScene" uid="uid://ctdtp8kbpjoox" path="res://npc/friendly_npc/Harold.tscn" id="8_166p4"]
-[ext_resource type="PackedScene" uid="uid://bx5mhjvmagywx" path="res://scenes/ui/standard_ui.tscn" id="9_8de6f"]
-[ext_resource type="PackedScene" uid="uid://ih5nrtcmmq0u" path="res://scenes/containers/chest.tscn" id="10_e0egg"]
+[ext_resource type="PackedScene" uid="uid://cje1icwhrle3f" path="res://items/containers/bomb.tscn" id="7_y0ld0"]
+[ext_resource type="PackedScene" uid="uid://ctdtp8kbpjoox" path="res://actors/npc/friendly_npc/Harold.tscn" id="8_166p4"]
+[ext_resource type="PackedScene" uid="uid://bx5mhjvmagywx" path="res://ui/standard_ui.tscn" id="9_8de6f"]
+[ext_resource type="PackedScene" uid="uid://ih5nrtcmmq0u" path="res://items/containers/chest.tscn" id="10_e0egg"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_egu6l"]
 
@@ -86,3 +86,5 @@ battle_maps_folder_path = "res://maps/"
 position = Vector2(8, 0)
 shape = SubResource("CircleShape2D_egu6l")
 disabled = true
+
+[connection signal="_on_sp_changed" from="Floor/Obstacle_1/Player" to="Floor/Obstacle_1/Player/PlayerMovement" method="_on_sp_changed"]

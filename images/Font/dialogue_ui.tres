@@ -1,7 +1,0 @@
-[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://cwx70e5v1d8a1"]
-
-[ext_resource type="FontFile" uid="uid://dx7jdme5cmjea" path="res://images/Font/m5x7.ttf" id="1_qgwqv"]
-
-[resource]
-font = ExtResource("1_qgwqv")
-font_size = 64
