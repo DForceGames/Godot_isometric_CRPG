@@ -178,3 +178,4 @@ script = ExtResource("7_0uenp")
 script = ExtResource("7_fd065")
 
 [connection signal="sp_changed" from="Stats" to="PlayerMovement" method="_on_sp_changed"]
+# Minor change
