@@ -141,7 +141,7 @@ animations = [{
 
 [node name="Player" type="CharacterBody2D"]
 safe_margin = 0.2
-script = ExtResource("1_3c3w1")
+script = ExtResource("1_wnvi2")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 position = Vector2(0, -20)
