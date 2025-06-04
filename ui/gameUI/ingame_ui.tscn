@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://3j5a5w48vqnc"]
+
+[node name="IngameUi" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ActionBar" type="PanelContainer" parent="."]
+layout_mode = 0
+offset_left = 199.0
+offset_top = 560.0
+offset_right = 972.0
+offset_bottom = 632.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="ActionBar"]
+layout_mode = 2
+alignment = 1
+
+[node name="Button" type="Button" parent="ActionBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="APCostLabel" type="Label" parent="ActionBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="IconRect" type="TextureRect" parent="ActionBar/HBoxContainer"]
+layout_mode = 2
+
+[node name="CooldownOverlay" type="Panel" parent="ActionBar/HBoxContainer"]
+layout_mode = 2

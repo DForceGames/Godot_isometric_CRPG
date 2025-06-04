@@ -18,9 +18,10 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameStateManager="*res://scripts/game_state_manager.gd"
-DialogueUi="res://scripts/managers/dialogue_ui.gd"
 DialogueManager="*res://scripts/managers/dialogue_manager.gd"
 Interactable="*res://scripts/interactable/interactable.gd"
+TurnBasedAgent="*res://scripts/managers/turn_based_agent.gd"
+PartyManager="*res://scripts/managers/party_manager.gd"
 
 [display]
 
