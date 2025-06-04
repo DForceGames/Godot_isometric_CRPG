@@ -15,4 +15,5 @@ ability_range = 1
 ability_power = 2.25
 area_of_effect_radius = 0
 animation_name = &""
+target_type = 0
 metadata/_custom_type_script = "uid://br2yqbte6ghj6"

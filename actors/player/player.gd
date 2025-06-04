@@ -1,22 +1,13 @@
 extends CharacterBody2D
 class_name Player
 
-@export var speed: float = 100.0
+var speed: float = 100.0
 @export var tilemap_path: NodePath
 @export var interaction_groups: Array[String] = ["interactable", "NPC", "Container", "pickup"]
 
 # Player Stats
 var player_name: String = "Player"
-var level: int = 1
-var max_health: int = 100
-var current_health: int = 100
-var max_action_points: int = 6
-var attack_power: int = 10
-var defense: int = 5
-var magic_power: int = 15
-var magic_defense: int = 3
 var experience: int = 0
-var max_sp: int = 6
 
 # References
 var game_state_manager
@@ -29,6 +20,7 @@ signal resources_refreshed(current_health, max_health, action_points, max_sp)
 signal _on_sp_changed(current_sp: int)
 
 func _ready() -> void:
+	await get_tree().process_frame
 	# Get GameStateManager
 	game_state_manager = get_node_or_null("/root/GameStateManager")
 	if game_state_manager:
@@ -75,13 +67,19 @@ func move_to_position(target_pos: Vector2) -> void:
 	if not movement_system:
 		return
 	
-	movement_system.start = global_position
-	movement_system.end = target_pos
-	movement_system.get_ideal_path()
+	# Check if we're in turn-based mode
+	if game_state_manager and game_state_manager.is_turn_based():
+		# Let the movement system handle turn-based movement with SP costs
+		movement_system.handle_turn_based_movement(target_pos)
+	else:
+		# Regular real-time path following
+		movement_system.start = global_position
+		movement_system.end = target_pos
+		movement_system.get_ideal_path()
 
 func _physics_process(_delta: float) -> void:
-	if movement_system and movement_system.path.size() > 0:
-		follow_path()
+	if movement_system and movement_system.path.size() > 0: # and GameStateManager.is_turn_based():
+		movement_system.follow_path() # Moved to movement_player
 	else:
 		velocity = Vector2.ZERO
 	
@@ -89,45 +87,6 @@ func _physics_process(_delta: float) -> void:
 		move_and_slide()
 	
 	_update_player_animations()
-
-# Follow the path provided by movement_system
-func follow_path() -> void:
-	# If we have no points left, stop
-	if movement_system.path.size() == 0:
-		velocity = Vector2.ZERO
-		return
-		
-	var next_point = movement_system.path[0]
-	var distance = global_position.distance_to(next_point)
-	
-	# If we're in turn-based mode and have no SP left, stop movement
-	if movement_system.is_turn_based_mode() and movement_system.current_sp <= 0 and movement_system.path.size() > 1:
-		movement_system.path = [next_point]  # Keep only current target
-		movement_system.emit_signal("step_taken", 0)  # Signal no more steps
-	
-	# Reached waypoint?
-	if distance < 1.0:
-		movement_system.path.remove_at(0)
-		
-		# If in turn-based mode, reduce SP for each waypoint reached
-		if movement_system.is_turn_based_mode() and movement_system.path.size() > 0:
-			movement_system.current_sp -= 1
-			movement_system.emit_signal("step_taken", movement_system.current_sp)
-			
-			# If SP is now 0, we can only move to the next waypoint then must stop
-			if movement_system.current_sp <= 0:
-				movement_system.path = [movement_system.path[0]]  # Keep only next waypoint
-		
-		if movement_system.path.is_empty():
-			if game_state_manager and game_state_manager.is_turn_based():
-				global_position = next_point
-			velocity = Vector2.ZERO
-			return
-			
-		next_point = movement_system.path[0]
-	
-	# Move toward next point
-	velocity = global_position.direction_to(next_point) * speed
 
 func _update_player_animations() -> void:
 	var anim_sprite = $AnimatedSprite2D
@@ -218,15 +177,15 @@ func end_npc_interaction() -> void:
 
 # Resouces -------------------------------------------------------------------------------------
 
-func refresh_resources() -> void:
+# func refresh_resources() -> void:
 	
-	# Reset any other resources as needed
-	print("Player resources refreshed")
+# 	# Reset any other resources as needed
+# 	print("Player resources refreshed")
 	
-	# Optionally reset inventory or other game state
-	# if game_state_manager:
-	# 	game_state_manager.refresh_inventory()
+# 	# Optionally reset inventory or other game state
+# 	# if game_state_manager:
+# 	# 	game_state_manager.refresh_inventory()
 
-	if movement_system:
-		movement_system.current_sp = max_sp
-		emit_signal("_on_sp_changed", movement_system.current_sp)
+# 	if movement_system:
+# 		movement_system.current_sp = Stats.max_sp
+# 		emit_signal("_on_sp_changed", movement_system.current_sp)

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=3 format=3 uid="uid://bn016tv1l18tm"]
+
+[ext_resource type="PackedScene" uid="uid://cmebbm3wtv4lo" path="res://actors/enemy/boar.tscn" id="1_djtoi"]
+[ext_resource type="Script" uid="uid://dr57hrq0mb4f4" path="res://encounters/encounter_data.gd" id="1_eykg8"]
+
+[resource]
+script = ExtResource("1_eykg8")
+enemy_scene = ExtResource("1_djtoi")
+count = 2
+level = 1
+metadata/_custom_type_script = "uid://dr57hrq0mb4f4"

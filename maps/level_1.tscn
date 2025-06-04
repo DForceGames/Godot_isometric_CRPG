@@ -85,6 +85,5 @@ battle_maps_folder_path = "res://maps/"
 [node name="CollisionShape2D" type="CollisionShape2D" parent="grassland"]
 position = Vector2(8, 0)
 shape = SubResource("CircleShape2D_egu6l")
-disabled = true
 
 [connection signal="_on_sp_changed" from="Floor/Obstacle_1/Player" to="Floor/Obstacle_1/Player/PlayerMovement" method="_on_sp_changed"]

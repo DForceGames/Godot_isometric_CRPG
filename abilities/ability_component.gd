@@ -16,13 +16,13 @@ func can_use_ability(ability_data: AbilityData, player_stats) -> bool:
     if ability_cooldowns.get(ability_data.id, 0) > 0:
         print("%s is on cooldown." % ability_data.ability_name)
         return false
-    if player_stats.current_sp < ability_data.ap_cost: # Assuming current_sp is on player
+    if player_stats.current_ap < ability_data.ap_cost: # Assuming current_sp is on player
         print("Not enough AP for %s." % ability_data.ability_name)
         return false
     # Add other checks like range, line of sight, target validity etc.
     return true
 
-func use_ability(ability_id: StringName, player_node: CharacterBody2D, target_data: Dictionary = {}):
+func use_ability(ability_id: int, player_node: CharacterBody2D, target_data: Dictionary = {}):
     var ability_data: AbilityData = null
     for ab in known_abilities:
         if ab.id == ability_id:
@@ -33,15 +33,20 @@ func use_ability(ability_id: StringName, player_node: CharacterBody2D, target_da
         printerr("Ability %s not found!" % ability_id)
         return
 
-    # Assuming your player script has 'current_sp' and a signal like '_on_sp_changed'
+    # Assuming player_node.stats exists and can_use_ability is updated
+    # to use player_node.stats.get_current_ap()
     if not can_use_ability(ability_data, player_node): 
         return
 
     print("Using ability: %s" % ability_data.ability_name)
 
-    # Deduct AP
-    player_node.movement_system.current_sp -= ability_data.ap_cost 
-    player_node.emit_signal("_on_sp_changed", player_node.movement_system.current_sp)
+    # Deduct AP using the new Stats method
+    player_node.stats.spend_ap(ability_data.ap_cost) 
+    # Assuming the signal is meant to reflect the new AP value,
+    # and player_node.stats.get_current_ap() returns the updated AP.
+    # If _on_sp_changed is strictly for SP and SP is a separate stat, 
+    # this line might need different handling based on your Stats class.
+    player_node.emit_signal("_on_sp_changed", player_node.stats.get_current_ap())
 
     # Set cooldown
     ability_cooldowns[ability_data.id] = ability_data.cooldown_time
@@ -91,3 +96,11 @@ func _find_targets_for_ability(caster: Node2D, ability: AbilityData, target_data
             # Add line of sight, cone checks etc.
             found_targets.append(enemy)
     return found_targets
+
+func decrement_turn_based_cooldowns():
+    var keys_to_update = ability_cooldowns.keys() # Iterate over a copy of keys
+    for ability_id_key in keys_to_update:
+        if ability_cooldowns[ability_id_key] > 0:
+            ability_cooldowns[ability_id_key] -= 1 # Decrement by 1 turn
+            if ability_cooldowns[ability_id_key] < 0: # Ensure it doesn't go below zero
+                ability_cooldowns[ability_id_key] = 0

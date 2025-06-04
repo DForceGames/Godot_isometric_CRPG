@@ -16,8 +16,7 @@ class_name AbilityData
 # Add more common properties:
 #@export var damage_type: Enum.DamageType # you'd define this enum
 #@export var target_type: Enum.TargetType # Ensure TargetType is defined within your Enum scope (e.g., an Enum script or class)
-# @export var area_of_effect_radius: float = 0.0
-#@export var effects_to_apply: Array[StatusEffectData] # Another custom resource
+# @export var effects_to_apply: Array[StatusEffectData] # Another custom resource
 
 @export_group("Visuals & Audio")
 @export var animation_name: StringName # Animation to play on the caster
@@ -25,6 +24,14 @@ class_name AbilityData
 @export var impact_effect_scene: PackedScene # e.g., explosion, hit spark
 @export var cast_sound: AudioStream
 @export var impact_sound: AudioStream
+
+enum TargetType {
+	SELF,
+	ENEMY,
+	ALLY,
+	AREA
+}
+@export var target_type: TargetType = TargetType.SELF
 
 # You might add a base 'execute' method here if there's common activation logic,
 # or leave it to an AbilityHandler.

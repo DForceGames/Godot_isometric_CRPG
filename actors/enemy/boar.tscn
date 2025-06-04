@@ -1,0 +1,74 @@
+[gd_scene load_steps=11 format=3 uid="uid://cmebbm3wtv4lo"]
+
+[ext_resource type="Texture2D" uid="uid://dfxjn1356bcbx" path="res://art_source/sprites/Characters/Boar/boar_SE_idle_strip.png" id="1_unsxy"]
+[ext_resource type="Script" uid="uid://dmwvi2hf0ari3" path="res://scripts/managers/turn_based_agent.gd" id="2_bx65e"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_bx65e"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(0, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_t8a3s"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(41, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lo1n7"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(82, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p1ish"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(123, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6cfx5"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(164, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h3f4t"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(205, 0, 41, 24)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gsbbm"]
+atlas = ExtResource("1_unsxy")
+region = Rect2(246, 0, 41, 24)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_fqifq"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_bx65e")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_t8a3s")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lo1n7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p1ish")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6cfx5")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h3f4t")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gsbbm")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="Boar" type="Node2D"]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_fqifq")
+frame_progress = 0.08696
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+position = Vector2(1, 25)
+polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -13, -12)
+
+[node name="TurnBasedAgent" type="Node" parent="."]
+script = ExtResource("2_bx65e")

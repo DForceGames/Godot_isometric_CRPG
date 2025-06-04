@@ -11,6 +11,7 @@ var tileset: TileSet = null
 # References
 var game_state_manager: Node
 var player: CharacterBody2D
+var stats_component: Stats
 
 # Movement state
 enum MovementPhase { IDLE, FOLLOWING_PATH }
@@ -20,14 +21,11 @@ var final_target_world_position: Vector2
 var current_step_target_world_position: Vector2
 var blocking_groups = ["NPC", "Solid", "Obstacle", "blocking_tilemap", "Container"]
 
-# Player resources
-var current_sp # Step Points - limited movement resource in turn-based mode
-
 # Signals
 signal path_completed
 signal movement_started
 signal step_taken(remaining_steps: int)
-signal sp_changed(new_sp: int)
+# signal sp_changed(new_sp: int)
 
 var astar_grid = AStarGrid2D.new()
 var grid_size
@@ -48,6 +46,7 @@ var hover_tile: Vector2i = Vector2i(-1, -1)
 var movement_range_indicator: Node2D
 
 func _ready() -> void:
+	await get_tree().process_frame
 	# Get player reference from parent
 	player = get_parent() as CharacterBody2D
 	if not player:
@@ -56,8 +55,14 @@ func _ready() -> void:
 		set_physics_process(false)
 		return
 
-	# Initialize SP after player is assigned
-	current_sp = player.max_sp if player.get("max_sp") != null else 0
+	stats_component = player.get_node_or_null("Stats") as Stats
+	if not stats_component:
+		printerr("PlayerMovement: Player does not have a Stats component. Movement system requires Stats for SP management.")
+	else:
+		if not stats_component.is_connected("sp_changed", Callable(self, "_on_sp_changed")):
+			stats_component.sp_changed.connect(_on_sp_changed)
+		if is_turn_based_mode():
+			show_movement_range()
 			
 	final_target_world_position = player.global_position
 	current_step_target_world_position = player.global_position
@@ -172,6 +177,64 @@ func get_ideal_path():
 	
 	print("Path found with ", path.size()-1, " points")
 	return path
+
+func follow_path() -> void:
+	if not player: # Ensure player node is valid
+		current_phase = MovementPhase.IDLE # Safety: stop if player is lost
+		return
+
+	# If path is empty, movement is done or not started.
+	if path.is_empty():
+		if player: # Check player again before setting velocity
+			player.velocity = Vector2.ZERO
+		
+		if current_phase == MovementPhase.FOLLOWING_PATH: # Was actively following
+			current_phase = MovementPhase.IDLE
+			emit_signal("path_completed")
+			if is_turn_based_mode():
+				show_movement_range() # Update visuals like movement range
+		return
+		
+	var next_target_waypoint: Vector2 = path[0]
+	var distance_to_target: float = player.global_position.distance_to(next_target_waypoint)
+	
+	# Check if player reached the current waypoint
+	if distance_to_target < 1.5: # Using a small threshold, adjust if needed
+		player.global_position = next_target_waypoint # Snap to waypoint
+		path.remove_at(0) # Remove reached waypoint
+		
+		# Only emit step_taken signal but don't deduct SP again since we already did in _handle_turn_based_input
+		if is_turn_based_mode():
+			emit_signal("step_taken") # Emit signal that we've taken a step
+
+		# If path becomes empty after removing current waypoint
+		if path.is_empty():
+			player.velocity = Vector2.ZERO # Stop movement
+			current_phase = MovementPhase.IDLE # Set state to idle
+			emit_signal("path_completed")
+			if is_turn_based_mode():
+				show_movement_range() # Update visuals
+			return # Movement for this frame ends here
+		
+		# If path is not empty, update next_target_waypoint for this frame's move
+		next_target_waypoint = path[0]
+	
+
+	# Move player towards the (new) next_target_waypoint.
+	if not path.is_empty():
+		player.velocity = player.global_position.direction_to(next_target_waypoint) * speed
+	else:
+		# This case should ideally be handled by the path empty check above.
+		player.velocity = Vector2.ZERO
+
+	# Note: player.move_and_slide() should typically be called in _physics_process 
+	# after this function updates player.velocity. For example:
+	#
+	# func _physics_process(delta: float) -> void:
+	#     if current_phase == MovementPhase.FOLLOWING_PATH:
+	#         follow_path()
+	#     if player and player.velocity != Vector2.ZERO:
+	#         player.move_and_slide()
 
 # Snaps a world position to the nearest tile center
 func snap_to_tile(world_position: Vector2) -> Vector2:
@@ -297,9 +360,10 @@ func show_movement_range() -> void:
 	movement_range_indicator.queue_redraw()
 	highlight_tiles.clear()
 
-	# Get player's current map position
+	# Get player's current map position and resources
 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
 	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+	var current_sp = stats_component.get_current_sp()
 
 	# Find all tiles within SP range 
 	highlight_tiles = get_tiles_in_range(player_map_pos, current_sp)
@@ -349,18 +413,28 @@ func _update_turn_based_pathfinding_preview() -> void:
 		
 	current_path_tiles.clear()
 	
-	# Check if hover tile is within movement range
-	if hover_tile in highlight_tiles:
+	if highlight_tiles.has(hover_tile):
 		var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
 		var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
-		
-		var path = astar_grid.get_id_path(player_map_pos, hover_tile)
-		
-		# Limit by SP
-		if path.size() - 1 <= current_sp:
-			current_path_tiles = path
-			
+		var path_ids = astar_grid.get_id_path(player_map_pos, hover_tile)
+
+		if path_ids.size() - 1 <= stats_component.get_current_sp() and path_ids.size() > 0:
+			current_path_tiles = path_ids
+	
 	movement_range_indicator.queue_redraw()
+
+	# # Check if hover tile is within movement range
+	# if hover_tile in highlight_tiles:
+	# 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
+	# 	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+		
+	# 	var path = astar_grid.get_id_path(player_map_pos, hover_tile)
+		
+	# 	# Limit by SP
+	# 	if path.size() - 1 <= current_sp:
+	# 		current_path_tiles = path
+			
+	# movement_range_indicator.queue_redraw()
 
 # Draw the movement range and path preview
 func _update_turn_based_visuals() -> void:
@@ -427,6 +501,9 @@ func handle_game_mode_changed(new_mode) -> void:
 
 # Update existing _handle_turn_based_input to use our new visuals
 func _handle_turn_based_input(event: InputEvent) -> void:
+	if not stats_component:
+		print("PlayerMovement: No Stats component found. Cannot handle input.")
+		return
 	# Get world coordinates for mouse click and player position
 	var mouse_pos = player.get_global_mouse_position()
 	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
@@ -450,44 +527,87 @@ func _handle_turn_based_input(event: InputEvent) -> void:
 
 	# Check if we have enough SP for the path
 	var steps_needed = new_path.size() - 1
-	if steps_needed > current_sp:
+	if steps_needed > stats_component.get_current_sp():
 		print("PlayerMovement: Not enough SP to take this path")
 		return
 
-	# We have enough SP, so take the path
-	path = new_path
-	current_sp -= steps_needed
-	print("PlayerMovement: Path initiated. Taking ", steps_needed, " steps. SP consumed: ", steps_needed, ". SP remaining: ", current_sp)
-	emit_signal("sp_changed", current_sp)
-	
-	# Update visuals immediately
-	highlight_tiles.clear()
-	current_path_tiles.clear()
-	movement_range_indicator.queue_redraw()
-	
-	_start_following_path()
+	if stats_component.spend_sp(steps_needed):
+		print("PlayerMovement: SP spent successfully for path")
+		path.clear()
+		for cell_id in new_path:
+			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
 
-# Handler for step_taken signal
-func _on_step_taken(remaining_steps: int) -> void:
-	# If we're in turn-based mode, update the movement range
-	if is_turn_based_mode():
-		# Only update visuals if we have tiles to highlight
-		movement_range_indicator.queue_redraw()
+		if movement_range_indicator: movement_range_indicator.queue_redraw()
+		_start_following_path()
+	else:
+		print("PlayerMovement: Failed to spend SP for path")
+		return
+
+# Handle turn-based movement with proper SP cost handling
+func handle_turn_based_movement(target_position: Vector2) -> void:
+	if not is_turn_based_mode() or not stats_component or not primary_tilemap_layer:
+		# Fall back to real-time pathfinding if not in turn-based mode
+		start = player.global_position
+		end = target_position
+		get_ideal_path()
+		return
+	
+	# Get target cell coordinates
+	var local_target_pos = primary_tilemap_layer.to_local(target_position)
+	var target_cell = primary_tilemap_layer.local_to_map(local_target_pos)
+	
+	# Only process clicks within movement range
+	if not target_cell in highlight_tiles:
+		print("PlayerMovement: Clicked outside movement range")
+		return
+	
+	# Get player's current cell
+	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
+	var player_cell = primary_tilemap_layer.local_to_map(player_local_pos)
+	
+	# Calculate path to the target cell
+	var new_path = astar_grid.get_id_path(player_cell, target_cell)
+	
+	if new_path.size() <= 1: # No path or path is just the current tile
+		print("PlayerMovement: No valid path found or target is current location.")
+		_reset_path()
+		return
+	
+	# Check if we have enough SP for the path
+	var steps_needed = new_path.size() - 1
+	if steps_needed > stats_component.get_current_sp():
+		print("PlayerMovement: Not enough SP to take this path")
+		return
+	
+	# Spend SP and setup path
+	if stats_component.spend_sp(steps_needed):
+		print("PlayerMovement: SP spent successfully for path of %d steps" % steps_needed)
+		path.clear()
 		
-		# If SP is 0, show no more movement possible
-		if remaining_steps <= 0:
-			highlight_tiles.clear()
-			current_path_tiles.clear()
-			movement_range_indicator.queue_redraw()
-		else:
-			# Otherwise update remaining range
-			show_movement_range()
+		# Convert path to world coordinates
+		for cell_id in new_path:
+			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
+		
+		if movement_range_indicator: movement_range_indicator.queue_redraw()
+		_start_following_path()
+	else:
+		print("PlayerMovement: Failed to spend SP for path")
+		return
 
 # Handler for sp_changed signal
-func _on_sp_changed(new_sp: int) -> void:
-	# Update the movement range when SP changes
+func _on_sp_changed(_new_sp: int, _max_sp: int) -> void:
+    # Update the movement range visuals whenever SP changes from the Stats component
+	print("PlayerMovement: SP changed to %s, max SP is %s" % [_new_sp, _max_sp])
 	if is_turn_based_mode():
-		show_movement_range()
+		print("PlayerMovement: Detected SP change from Stats. New SP: %s. Updating movement range." % _new_sp)
+		show_movement_range() 
+		_update_turn_based_pathfinding_preview() 
+		if movement_range_indicator: movement_range_indicator.queue_redraw()
+
+# Ensure _on_step_taken exists if connected in _ready
+func _on_step_taken() -> void:
+	if is_turn_based_mode():
+		if movement_range_indicator: movement_range_indicator.queue_redraw()
 		
 
 # Check if we're in turn-based mode

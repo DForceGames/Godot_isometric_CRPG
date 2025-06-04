@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3 uid="uid://dphi76mlubcvm"]
+[gd_scene load_steps=26 format=3 uid="uid://dphi76mlubcvm"]
 
 [ext_resource type="Script" uid="uid://bbfunwmu8xikj" path="res://actors/player/player.gd" id="1_3c3w1"]
 [ext_resource type="Texture2D" uid="uid://cgtkrwpoidwwc" path="res://actors/player/player.png" id="2_3c3w1"]
@@ -6,6 +6,8 @@
 [ext_resource type="Script" uid="uid://daaduh2v5kfms" path="res://abilities/ability_component.gd" id="4_svriy"]
 [ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="5_fd065"]
 [ext_resource type="Resource" uid="uid://wxgcmdslftc6" path="res://abilities/data/fighter/slam.tres" id="6_0uenp"]
+[ext_resource type="Script" uid="uid://uua0isc2hiex" path="res://actors/_shared/stats.gd" id="7_0uenp"]
+[ext_resource type="Script" uid="uid://dmwvi2hf0ari3" path="res://scripts/managers/turn_based_agent.gd" id="7_fd065"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_wnvi2"]
 atlas = ExtResource("2_3c3w1")
@@ -168,3 +170,11 @@ polygon = PackedVector2Array(-2, -10, 3, -13, -3, -16, -9, -13)
 [node name="Abilitys" type="Marker2D" parent="."]
 script = ExtResource("4_svriy")
 known_abilities = Array[ExtResource("5_fd065")]([ExtResource("6_0uenp")])
+
+[node name="Stats" type="Marker2D" parent="."]
+script = ExtResource("7_0uenp")
+
+[node name="TurnBasedAgent" type="Node" parent="."]
+script = ExtResource("7_fd065")
+
+[connection signal="sp_changed" from="Stats" to="PlayerMovement" method="_on_sp_changed"]

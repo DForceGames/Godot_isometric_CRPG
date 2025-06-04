@@ -22,7 +22,7 @@ func _ensure_dialogue_ui_exists() -> void:
 	
 	if not dialogue_ui:
 		# Create UI from scene
-		var scene_path = "res://scenes/ui/dialogue_ui.tscn"
+		var scene_path = "res://ui/dialogue_ui.tscn"
 		print("DialogueManager: Loading DialogueUI from:", scene_path)
 		
 		var scene = load(scene_path)
