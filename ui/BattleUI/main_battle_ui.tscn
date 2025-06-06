@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://bvdwp03s1ifpc"]
+
+[ext_resource type="Script" uid="uid://dogvobfv6elij" path="res://ui/BattleUI/battle_ui.gd" id="1_tl42q"]
+[ext_resource type="PackedScene" uid="uid://vjd6n1qggdvg" path="res://ui/BattleUI/turn_order.tscn" id="2_be03e"]
+[ext_resource type="PackedScene" uid="uid://cobhbmqel8qip" path="res://ui/gameUI/party_members.tscn" id="3_2ae3i"]
+
+[node name="MainBattleUi" type="CanvasLayer"]
+script = ExtResource("1_tl42q")
+
+[node name="TurnOrder" parent="." instance=ExtResource("2_be03e")]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="PartyMembers" parent="." instance=ExtResource("3_2ae3i")]

@@ -29,11 +29,16 @@ func switch_to_real_time():
 func switch_to_turn_based():
 	self.current_mode = GameMode.TURN_BASED
 	# Get current enemy in scene if not already set
-	# if enemy_node == null:
-	# 	# This is a placeholder. In actual implementation, you'd get enemies from the current scene
-	# 	enemy_node = get_tree().get_nodes_in_group("enemies").front()
-	# var combat_manager = CombatManager.new()
-	# combat_manager.initialize_combat_encounter(player_node, enemy_node) # Ensure combat is ready for turn-based
+	# Check for enemies in the current scene
+	var enemies = get_tree().get_nodes_in_group("enemies")
+	if not enemies.is_empty():
+		var enemy_node = enemies.front()
+		print("Found enemy for turn-based mode: ", enemy_node.name)
+	else:
+		print("No enemies found in current scene for turn-based mode")
+	
+	# Note: This is just preparation for turn-based mode
+	# Actual combat initialization happens in start_combat_sequence
 
 func start_combat_sequence(player_nodes_in_party: Array[Node], encounter_data: EncounterData):
 	if current_combat_instance != null:

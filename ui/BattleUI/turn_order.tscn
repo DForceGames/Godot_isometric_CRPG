@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://vjd6n1qggdvg"]
+[gd_scene load_steps=5 format=3 uid="uid://vjd6n1qggdvg"]
 
-[ext_resource type="Script" uid="uid://eknkc8hnmo8w" path="res://ui/gameUI/turn_order.gd" id="1_svxpl"]
+[ext_resource type="Theme" uid="uid://me6ahtf7mjsm" path="res://art_source/Theme/DefaultTheme.tres" id="1_rheaf"]
+[ext_resource type="Script" uid="uid://eknkc8hnmo8w" path="res://ui/BattleUI/turn_order.gd" id="1_svxpl"]
 [ext_resource type="PackedScene" uid="uid://dx63hlp2x6a1l" path="res://ui/gameUI/character_icon_display.tscn" id="2_lv8ts"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4kkdn"]
@@ -9,8 +10,6 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 15
-corner_radius_top_right = 15
 corner_radius_bottom_right = 15
 corner_radius_bottom_left = 15
 
@@ -21,20 +20,22 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("1_rheaf")
 script = ExtResource("1_svxpl")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
+offset_bottom = 75.0
 grow_horizontal = 2
-theme_override_constants/margin_left = 50
-theme_override_constants/margin_top = 50
-theme_override_constants/margin_right = 50
-theme_override_constants/margin_bottom = 50
+theme_override_constants/margin_left = 300
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 300
+theme_override_constants/margin_bottom = 0
 
 [node name="PanelContainer" type="PanelContainer" parent="MarginContainer"]
-custom_minimum_size = Vector2(0, 125)
+custom_minimum_size = Vector2(0, 75)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_4kkdn")
 
@@ -44,8 +45,8 @@ vertical_scroll_mode = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/PanelContainer/ScrollContainer"]
 layout_mode = 2
-theme_override_constants/margin_left = 25
-theme_override_constants/margin_top = 25
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 5
 
 [node name="CharacterContainer" type="HBoxContainer" parent="MarginContainer/PanelContainer/ScrollContainer/MarginContainer"]
 unique_name_in_owner = true
