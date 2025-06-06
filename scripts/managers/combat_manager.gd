@@ -40,6 +40,10 @@ var current_round: int = 0
 var is_combat_active: bool = false
 var current_combat_state: CombatState = CombatState.IDLE
 
+# UI
+const battle_ui_scene = preload("res://ui/BattleUI/main_battle_ui.tscn")
+var _battle_ui: CanvasLayer
+
 # --- Private Variables for Action Handling ---
 var _selected_ability_for_use: AbilityData = null # Set when UI ability is picked by player
 var _character_using_ability: Node = null       # Set when UI ability is picked by player
@@ -66,6 +70,13 @@ func _ready():
             
     if not combat_grid_node_path.is_empty():
         _combat_grid = get_node_or_null(combat_grid_node_path)
+
+    # Create UI
+    if battle_ui_scene:
+        _battle_ui = battle_ui_scene.instantiate()
+        add_child(_battle_ui)
+    else:
+        printerr("CombatManager: Failed to load BattleUI scene.")
 
 
 func initialize_combat_encounter(player_nodes: Array[Node], enemy_nodes: Array[Node]):

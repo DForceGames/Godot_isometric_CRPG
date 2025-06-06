@@ -1,0 +1,15 @@
+[gd_resource type="Theme" load_steps=4 format=3 uid="uid://me6ahtf7mjsm"]
+
+[ext_resource type="FontFile" uid="uid://dx7jdme5cmjea" path="res://art_source/Font/m5x7.ttf" id="1_hbu2u"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hbu2u"]
+bg_color = Color(0.247059, 0.262745, 0.27451, 0.854902)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_op0h8"]
+bg_color = Color(0.454902, 0.454902, 0.454902, 0)
+
+[resource]
+default_font = ExtResource("1_hbu2u")
+default_font_size = 48
+Label/styles/normal = SubResource("StyleBoxFlat_hbu2u")
+PanelContainer/styles/panel = SubResource("StyleBoxFlat_op0h8")

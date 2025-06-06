@@ -53,28 +53,30 @@ tile_map_data = PackedByteArray("AAAUAAEAAQADAAEAAAA=")
 tile_set = ExtResource("1_ux3er")
 
 [node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, 26)
 script = ExtResource("3_efco1")
 
 [node name="Button" type="Button" parent="Camera2D"]
-offset_left = 462.0
-offset_top = 274.0
-offset_right = 557.0
-offset_bottom = 305.0
+offset_left = 511.0
+offset_top = 310.0
+offset_right = 606.0
+offset_bottom = 341.0
 text = " Refresh SP"
 script = ExtResource("4_7skvm")
 player_node_path = NodePath("../../Floor/Obstacle_1/Player")
 metadata/_edit_use_anchors_ = true
 
 [node name="Button2" type="Button" parent="Camera2D"]
-offset_left = 277.0
-offset_top = 274.0
-offset_right = 434.0
-offset_bottom = 305.0
+offset_left = 326.0
+offset_top = 310.0
+offset_right = 483.0
+offset_bottom = 341.0
 text = " Toggle Gamemode"
 script = ExtResource("5_yrkou")
 metadata/_edit_use_anchors_ = true
 
 [node name="StandardUi" parent="Camera2D" instance=ExtResource("9_8de6f")]
+position = Vector2(516, 176)
 
 [node name="grassland" type="Area2D" parent="."]
 position = Vector2(-132, 5)
