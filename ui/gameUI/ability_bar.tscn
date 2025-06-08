@@ -1,0 +1,178 @@
+[gd_scene load_steps=5 format=3 uid="uid://clbimt2ojlm11"]
+
+[ext_resource type="Theme" uid="uid://me6ahtf7mjsm" path="res://art_source/Theme/DefaultTheme.tres" id="1_m8i6t"]
+[ext_resource type="Texture2D" uid="uid://c4onupwgjpf8n" path="res://art_source/sprites/Owlet_Monster_Idle_4.png" id="2_da35i"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gvrcm"]
+atlas = ExtResource("2_da35i")
+region = Rect2(2, 6, 26, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_htmvw"]
+atlas = SubResource("AtlasTexture_gvrcm")
+
+[node name="AbilityBar" type="PanelContainer"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -166.0
+offset_right = 340.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme = ExtResource("1_m8i6t")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(44, 132)
+layout_mode = 2
+
+[node name="AbilitySlot1" type="Button" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+autowrap_mode = 2
+
+[node name="AbilitySlot2" type="Button" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+
+[node name="AbilitySlot3" type="Button" parent="HBoxContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+
+[node name="TextureRect" type="TextureRect" parent="HBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(132, 132)
+layout_mode = 2
+texture = SubResource("AtlasTexture_htmvw")
+expand_mode = 5
+stretch_mode = 4
+
+[node name="GridContainer" type="GridContainer" parent="HBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_constants/v_separation = 7
+columns = 2
+
+[node name="Label4" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "HP:"
+
+[node name="Label3" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "100/100"
+horizontal_alignment = 1
+
+[node name="Label5" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "AP:"
+
+[node name="Label" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "6"
+horizontal_alignment = 1
+
+[node name="Label6" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "SP:"
+
+[node name="Label2" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+layout_mode = 2
+text = "6"
+horizontal_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="AbilitySlotsContainer" type="HBoxContainer" parent="HBoxContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="AbilitySlot1" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+
+[node name="AbilitySlot2" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "2"
+
+[node name="AbilitySlot3" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "3"
+
+[node name="AbilitySlot4" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "4"
+
+[node name="AbilitySlot5" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "5"
+
+[node name="AbilitySlot6" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "6"
+
+[node name="AbilitySlotsContainer2" type="HBoxContainer" parent="HBoxContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="AbilitySlot1" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "1"
+
+[node name="AbilitySlot2" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "2"
+
+[node name="AbilitySlot3" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "3"
+
+[node name="AbilitySlot4" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "4"
+
+[node name="AbilitySlot5" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "5"
+
+[node name="AbilitySlot6" type="Button" parent="HBoxContainer/VBoxContainer/AbilitySlotsContainer2"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "6"

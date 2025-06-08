@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://cobhbmqel8qip"]
 
 [ext_resource type="Theme" uid="uid://me6ahtf7mjsm" path="res://art_source/Theme/DefaultTheme.tres" id="1_slm0f"]
-[ext_resource type="PackedScene" uid="uid://dx63hlp2x6a1l" path="res://ui/gameUI/character_icon_display.tscn" id="2_uat8m"]
+[ext_resource type="PackedScene" uid="uid://dx63hlp2x6a1l" path="res://ui/BattleUI/character_icon_display.tscn" id="2_uat8m"]
 
 [node name="PartyMembers" type="Control"]
 layout_mode = 3

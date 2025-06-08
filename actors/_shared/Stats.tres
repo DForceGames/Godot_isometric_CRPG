@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Stats" load_steps=2 format=3 uid="uid://rh235su4rx2k"]
+
+[ext_resource type="Script" uid="uid://uua0isc2hiex" path="res://actors/_shared/stats.gd" id="1_j63sg"]
+
+[resource]
+script = ExtResource("1_j63sg")
+level = 1
+max_health = 100
+max_action_points = 6
+max_step_points = 6
+attack_power = 10
+defense = 5
+magic_power = 15
+magic_defense = 3
+initiative = 10
+metadata/_custom_type_script = "uid://uua0isc2hiex"

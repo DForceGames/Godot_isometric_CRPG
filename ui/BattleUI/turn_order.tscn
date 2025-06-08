@@ -2,7 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://me6ahtf7mjsm" path="res://art_source/Theme/DefaultTheme.tres" id="1_rheaf"]
 [ext_resource type="Script" uid="uid://eknkc8hnmo8w" path="res://ui/BattleUI/turn_order.gd" id="1_svxpl"]
-[ext_resource type="PackedScene" uid="uid://dx63hlp2x6a1l" path="res://ui/gameUI/character_icon_display.tscn" id="2_lv8ts"]
+[ext_resource type="PackedScene" uid="uid://dx63hlp2x6a1l" path="res://ui/BattleUI/character_icon_display.tscn" id="2_lv8ts"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4kkdn"]
 border_width_left = 2
@@ -13,22 +13,16 @@ border_color = Color(0, 0, 0, 1)
 corner_radius_bottom_right = 15
 corner_radius_bottom_left = 15
 
-[node name="TurnOrder" type="Control"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme = ExtResource("1_rheaf")
-script = ExtResource("1_svxpl")
-
-[node name="MarginContainer" type="MarginContainer" parent="."]
-layout_mode = 1
+[node name="TurnOrder" type="PanelContainer"]
 anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 75.0
 grow_horizontal = 2
+theme = ExtResource("1_rheaf")
+script = ExtResource("1_svxpl")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
 theme_override_constants/margin_left = 300
 theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 300
@@ -51,6 +45,7 @@ theme_override_constants/margin_top = 5
 [node name="CharacterContainer" type="HBoxContainer" parent="MarginContainer/PanelContainer/ScrollContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
+alignment = 1
 
 [node name="CharacterDisplayContainer" parent="MarginContainer/PanelContainer/ScrollContainer/MarginContainer/CharacterContainer" instance=ExtResource("2_lv8ts")]
 layout_mode = 2

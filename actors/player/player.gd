@@ -5,19 +5,21 @@ var speed: float = 100.0
 @export var tilemap_path: NodePath
 @export var interaction_groups: Array[String] = ["interactable", "NPC", "Container", "pickup"]
 
-# Player Stats
+# Player Stats, further stats are in the shared stats.gd
 var player_name: String = "Player"
 var experience: int = 0
+@export var stats: Stats
 
 # References
 var game_state_manager
+var combat_manager
 var movement_system
 var interaction_distance: float = 64.0
 var current_nearby_npc: NPC = null
+var is_my_turn: bool = false
 
 # Signals
-signal resources_refreshed(current_health, max_health, action_points, max_sp)
-signal _on_sp_changed(current_sp: int)
+
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -25,7 +27,26 @@ func _ready() -> void:
 	game_state_manager = get_node_or_null("/root/GameStateManager")
 	if game_state_manager:
 		game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
+
+	combat_manager = get_node_or_null("/root/CombatManager")
+	if combat_manager:
+		combat_manager.combat_started.connect(on_combat_started)
+		combat_manager.combat_ended.connect(on_combat_ended)
+		combat_manager.turn_started.connect(on_turn_start)
 	
+	# Get player stats
+	if not stats:
+		printerr("Player: No stats resource assigned!")
+		return
+	stats.initialize_stats()
+	stats.health_changed.connect(_on_health_changed)
+	stats.ap_changed.connect(_on_ap_changed)
+	stats.sp_changed.connect(_on_sp_changed)
+	stats.died.connect(_on_died)
+
+	# Register player in PartyManager
+	PartyManager.register_main_character(self)
+
 	# Setup movement system
 	movement_system = get_node_or_null("PlayerMovement")
 	if movement_system:
@@ -34,6 +55,10 @@ func _ready() -> void:
 		printerr("Player: PlayerMovement node not found as a child")
 
 func _input(event: InputEvent) -> void:
+	# Ignore input during combat when it's not the player's turn
+	if combat_manager and combat_manager.is_combat_ended and not is_my_turn:
+		return
+	
 	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
 		return
 		
@@ -50,6 +75,42 @@ func _input(event: InputEvent) -> void:
 	else:
 		# Move to clicked position
 		move_to_position(get_global_mouse_position())
+# Combat handlers -------------------------------------------------------------
+
+func on_combat_started():
+	is_my_turn = false
+
+func on_combat_ended():
+	is_my_turn = false
+
+func on_combat_manager_turn_started(combatant):
+	if combatant == self:
+		is_my_turn = true
+		stats.on_turn_started()
+	else:
+		is_my_turn = false
+
+func on_turn_start():
+	is_my_turn = true
+	stats.on_turn_started()
+
+func _on_health_changed(current_health, max_health):
+	emit_signal("health_changed", current_health, max_health)
+
+func _on_ap_changed(current_ap, max_ap):
+	emit_signal("ap_changed", current_ap, max_ap)
+
+func _on_sp_changed(current_sp: int):
+	emit_signal("_on_sp_changed", current_sp)
+
+func _on_died():
+	$AnimatedSprite2D.play("Death")
+	emit_signal("died", self)
+
+func take_damage(damage_amount):
+	if not stats:
+		return
+	stats.take_damage(damage_amount)
 
 # Movement and animation -------------------------------------------------------------
 

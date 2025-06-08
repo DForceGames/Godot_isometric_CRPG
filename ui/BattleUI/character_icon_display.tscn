@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://dx63hlp2x6a1l"]
+[gd_scene load_steps=3 format=3 uid="uid://dx63hlp2x6a1l"]
+
+[ext_resource type="Script" uid="uid://cfycghawodbkw" path="res://ui/BattleUI/turn_order_icon.gd" id="1_bvmrj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cj8eb"]
 content_margin_left = 5.0
@@ -17,6 +19,7 @@ corner_radius_bottom_left = 5
 
 [node name="PanelContainer" type="PanelContainer"]
 theme_override_styles/panel = SubResource("StyleBoxFlat_cj8eb")
+script = ExtResource("1_bvmrj")
 
 [node name="TextureRect" type="TextureRect" parent="."]
 custom_minimum_size = Vector2(50, 50)

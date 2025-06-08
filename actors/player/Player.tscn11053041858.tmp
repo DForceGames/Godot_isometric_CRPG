@@ -1,4 +1,145 @@
-extends Node2D
+[gd_scene load_steps=26 format=3 uid="uid://dphi76mlubcvm"]
+
+[ext_resource type="Script" uid="uid://bbfunwmu8xikj" path="res://actors/player/player.gd" id="1_fd065"]
+[ext_resource type="Texture2D" uid="uid://cgtkrwpoidwwc" path="res://actors/player/player.png" id="2_3c3w1"]
+[ext_resource type="Script" uid="uid://daaduh2v5kfms" path="res://abilities/ability_component.gd" id="4_svriy"]
+[ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="5_fd065"]
+[ext_resource type="Resource" uid="uid://wxgcmdslftc6" path="res://abilities/data/fighter/slam.tres" id="6_0uenp"]
+[ext_resource type="Script" uid="uid://uua0isc2hiex" path="res://actors/_shared/stats.gd" id="7_0uenp"]
+[ext_resource type="Script" uid="uid://dmwvi2hf0ari3" path="res://scripts/managers/turn_based_agent.gd" id="7_fd065"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wnvi2"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(0, 192, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_83hs8"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(72, 192, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_x8kxw"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(144, 192, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_aqcbf"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(216, 192, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3c3w1"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(792, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hbkom"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(720, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d4g0h"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(648, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_v4f8b"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(576, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_t8epa"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(504, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w24id"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(432, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gskgj"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(0, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_06mnu"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(72, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mhpjh"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(144, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ndjxb"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(216, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_5qrx2"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(288, 0, 72, 48)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b32pr"]
+atlas = ExtResource("2_3c3w1")
+region = Rect2(360, 0, 72, 48)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_hbkom"]
+animations = [{
+"frames": [{
+"duration": 2.5,
+"texture": SubResource("AtlasTexture_wnvi2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_83hs8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_x8kxw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_aqcbf")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3c3w1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hbkom")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d4g0h")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_v4f8b")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_t8epa")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w24id")
+}],
+"loop": true,
+"name": &"walking_left",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gskgj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_06mnu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mhpjh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ndjxb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_5qrx2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_b32pr")
+}],
+"loop": true,
+"name": &"walking_right",
+"speed": 10.0
+}]
+
+[sub_resource type="GDScript" id="GDScript_fd065"]
+script/source = "extends Node
 
 @export var cell_size: Vector2 = Vector2(32, 32)
 @export var speed: float = 100.0
@@ -10,8 +151,8 @@ var tileset: TileSet = null
 
 # References
 var game_state_manager: Node
-var player
-var stats_component 
+var player: CharacterBody2D
+var stats_component: Stats
 
 # Movement state
 enum MovementPhase { IDLE, FOLLOWING_PATH }
@@ -19,7 +160,7 @@ var current_phase = MovementPhase.IDLE
 var current_path_index: int = 0
 var final_target_world_position: Vector2
 var current_step_target_world_position: Vector2
-var blocking_groups = ["NPC", "Solid", "Obstacle", "blocking_tilemap", "Container"]
+var blocking_groups = [\"NPC\", \"Solid\", \"Obstacle\", \"blocking_tilemap\", \"Container\"]
 
 # Signals
 signal path_completed
@@ -46,18 +187,20 @@ var hover_tile: Vector2i = Vector2i(-1, -1)
 var movement_range_indicator: Node2D
 
 func _ready() -> void:
-	await owner.ready
+	await get_tree().process_frame
 	# Get player reference from parent
-	player = owner as CharacterBody2D
+	player = get_parent() as CharacterBody2D
 	if not player:
-		printerr("PlayerMovement: Parent is not a CharacterBody2D. Movement system needs to be a child of the player.")
+		printerr(\"PlayerMovement: Parent is not a CharacterBody2D. Movement system needs to be a child of the player.\")
+		set_process(false)
+		set_physics_process(false)
 		return
 
-	stats_component = player.stats
+	stats_component = player.get_node_or_null(\"Stats\") as Stats
 	if not stats_component:
-		printerr("PlayerMovement: Player does not have a Stats component. Movement system requires Stats for SP management.")
+		printerr(\"PlayerMovement: Player does not have a Stats component. Movement system requires Stats for SP management.\")
 	else:
-		if not stats_component.is_connected("sp_changed", Callable(self, "_on_sp_changed")):
+		if not stats_component.is_connected(\"sp_changed\", Callable(self, \"_on_sp_changed\")):
 			stats_component.sp_changed.connect(_on_sp_changed)
 		if is_turn_based_mode():
 			show_movement_range()
@@ -66,39 +209,39 @@ func _ready() -> void:
 	current_step_target_world_position = player.global_position
 	
 	# Get the GameStateManager singleton
-	game_state_manager = get_node_or_null("/root/GameStateManager")
+	game_state_manager = get_node_or_null(\"/root/GameStateManager\")
 	if not game_state_manager:
-		printerr("PlayerMovement: GameStateManager autoload not found.")
+		printerr(\"PlayerMovement: GameStateManager autoload not found.\")
 		
 	# Connect our own step_taken signal to update the movement range
-	if not is_connected("step_taken", Callable(self, "_on_step_taken")):
-		connect("step_taken", Callable(self, "_on_step_taken"))
+	if not is_connected(\"step_taken\", Callable(self, \"_on_step_taken\")):
+		connect(\"step_taken\", Callable(self, \"_on_step_taken\"))
 	
 	# Also connect sp_changed signal for same purpose
-	if not is_connected("sp_changed", Callable(self, "_on_sp_changed")):
-		connect("sp_changed", Callable(self, "_on_sp_changed"))
+	if not is_connected(\"sp_changed\", Callable(self, \"_on_sp_changed\")):
+		connect(\"sp_changed\", Callable(self, \"_on_sp_changed\"))
 
 func initialize_grid() -> void:
 	if primary_tilemap_layer == null:
-		print("Cannot initialize grid: No primary_tilemap_layer set")
+		print(\"Cannot initialize grid: No primary_tilemap_layer set\")
 		return
 	
 	if tileset == null:
 		tileset = primary_tilemap_layer.tile_set
 		if tileset == null:
-			print("Cannot initialize grid: No tileset found in primary_tilemap_layer")
+			print(\"Cannot initialize grid: No tileset found in primary_tilemap_layer\")
 			return
 
 	# Now you can use the primary_tilemap_layer to determine grid size if needed
 	grid_size = Rect2i(Vector2i.ZERO, Vector2i(100, 100))  # Example region, adjust as needed
-	print("Grid initialized with size: ", grid_size)
+	print(\"Grid initialized with size: \", grid_size)
 	astar_grid.region = grid_size  # Use the region property directly with Rect2i
 	astar_grid.offset = cell_size / 2  # Center the grid on the origin
 	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	astar_grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
 	astar_grid.cell_shape = AStarGrid2D.CELL_SHAPE_ISOMETRIC_DOWN
 	astar_grid.update()
-	print("Grid made, isometric: ", astar_grid.default_estimate_heuristic)
+	print(\"Grid made, isometric: \", astar_grid.default_estimate_heuristic)
 	
 	# Set tiles solid based on groups
 	set_tiles_solid_from_groups()
@@ -109,7 +252,7 @@ func initialize_grid() -> void:
 func _enter_tree() -> void:
 	# Create a node for visualizing movement range
 	movement_range_indicator = Node2D.new()
-	movement_range_indicator.name = "MovementRangeIndicator"
+	movement_range_indicator.name = \"MovementRangeIndicator\"
 	movement_range_indicator.z_index = 100  # Make sure it appears above the tilemap
 	add_child(movement_range_indicator)
 	movement_range_indicator.visible = false
@@ -118,7 +261,7 @@ func get_realtime_path() -> Array[Vector2]:
 	# This function is a placeholder for real-time pathfinding logic
 	# In real-time mode, we might not need a path at all, just move directly
 	if primary_tilemap_layer == null:
-		print("Cannot find path: No primary_tilemap_layer set")
+		print(\"Cannot find path: No primary_tilemap_layer set\")
 		return []
 	
 	# For now, return an empty path
@@ -130,7 +273,7 @@ func get_ideal_path():
 	
 	# Make sure we have a valid grid
 	if primary_tilemap_layer == null:
-		print("Cannot find path: No primary_tilemap_layer set")
+		print(\"Cannot find path: No primary_tilemap_layer set\")
 		return []
 	
 	# Check all nodes in the scene for blocking groups
@@ -153,18 +296,18 @@ func get_ideal_path():
 	var start_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_start))
 	var end_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_end))
 	
-	print("Finding path from world pos ", snapped_start, " to ", snapped_end)
-	print("Converted to grid cells: from ", start_cell, " to ", end_cell)
+	print(\"Finding path from world pos \", snapped_start, \" to \", snapped_end)
+	print(\"Converted to grid cells: from \", start_cell, \" to \", end_cell)
 	
 	# Check if cells are within bounds
 	if not grid_size.has_point(start_cell) or not grid_size.has_point(end_cell):
-		print("Start or end position out of grid bounds")
+		print(\"Start or end position out of grid bounds\")
 		return []
 		# Get path using grid coordinates
 	var id_path = astar_grid.get_id_path(start_cell, end_cell)
 	
 	if id_path.is_empty():
-		print("No path found from ", start_cell, " to ", end_cell)
+		print(\"No path found from \", start_cell, \" to \", end_cell)
 		return []
 	
 	# Convert path back to world coordinates
@@ -173,7 +316,7 @@ func get_ideal_path():
 		var world_pos = primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_pos))
 		path.append(world_pos)
 	
-	print("Path found with ", path.size()-1, " points")
+	print(\"Path found with \", path.size()-1, \" points\")
 	return path
 
 func follow_path() -> void:
@@ -188,7 +331,7 @@ func follow_path() -> void:
 		
 		if current_phase == MovementPhase.FOLLOWING_PATH: # Was actively following
 			current_phase = MovementPhase.IDLE
-			emit_signal("path_completed")
+			emit_signal(\"path_completed\")
 			if is_turn_based_mode():
 				show_movement_range() # Update visuals like movement range
 		return
@@ -203,13 +346,13 @@ func follow_path() -> void:
 		
 		# Only emit step_taken signal but don't deduct SP again since we already did in _handle_turn_based_input
 		if is_turn_based_mode():
-			emit_signal("step_taken") # Emit signal that we've taken a step
+			emit_signal(\"step_taken\") # Emit signal that we've taken a step
 
 		# If path becomes empty after removing current waypoint
 		if path.is_empty():
 			player.velocity = Vector2.ZERO # Stop movement
 			current_phase = MovementPhase.IDLE # Set state to idle
-			emit_signal("path_completed")
+			emit_signal(\"path_completed\")
 			if is_turn_based_mode():
 				show_movement_range() # Update visuals
 			return # Movement for this frame ends here
@@ -247,7 +390,7 @@ func snap_to_tile(world_position: Vector2) -> Vector2:
 	# Add y_offset to ensure visual consistency
 	var snapped_pos = primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(map_pos))
 	
-	print("Snapped position from ", world_position, " to ", snapped_pos)
+	print(\"Snapped position from \", world_position, \" to \", snapped_pos)
 	return snapped_pos
 
 # Snaps an entity (player or NPC) to the nearest tile center
@@ -262,9 +405,9 @@ func snap_entity_to_tile(entity: Node2D, npc_id: int = 0) -> void:
 	var distance = current_pos.distance_to(snapped_pos)
 	if distance < cell_size.length() * 0.75:
 		entity.global_position = snapped_pos
-		print("Snapped entity ", npc_id, " to tile: distance was ", distance)
+		print(\"Snapped entity \", npc_id, \" to tile: distance was \", distance)
 	else:
-		print("Entity too far from tile center (", distance, "), not snapping")
+		print(\"Entity too far from tile center (\", distance, \"), not snapping\")
 
 # Call this after the level is loaded to snap all entities to the grid
 func snap_all_entities_to_grid() -> void:
@@ -275,7 +418,7 @@ func snap_all_entities_to_grid() -> void:
 	if is_instance_valid(player):
 		snap_entity_to_tile(player)
 		
-	print("Snapped all entities to grid")
+	print(\"Snapped all entities to grid\")
 
 # Implement a new function for processing input during player's turn
 func _input(event: InputEvent) -> void:
@@ -291,41 +434,41 @@ func _input(event: InputEvent) -> void:
 		if new_hover_tile != hover_tile:
 			hover_tile = new_hover_tile
 			# Add a small delay before updating the pathfinding preview
-			if has_node("_hover_timer"):
-				get_node("_hover_timer").start()
+			if has_node(\"_hover_timer\"):
+				get_node(\"_hover_timer\").start()
 			else:
 				var timer = Timer.new()
-				timer.name = "_hover_timer"
+				timer.name = \"_hover_timer\"
 				timer.one_shot = true
 				timer.wait_time = 0.1
-				timer.connect("timeout", Callable(self, "_update_turn_based_pathfinding_preview"))
+				timer.connect(\"timeout\", Callable(self, \"_update_turn_based_pathfinding_preview\"))
 				add_child(timer)
 				timer.start()
 
 	# Add this to your _input() function
 	if event is InputEventKey and event.pressed:
-		if Input.is_action_pressed("debug_key"):
-			print("Tiled debugview toggled")
+		if Input.is_action_pressed(\"debug_key\"):
+			print(\"Tiled debugview toggled\")
 			toggle_debug_view()
 
 func get_tileset() -> TileSet:
 	if primary_tilemap_layer and primary_tilemap_layer.tile_set:
 		return primary_tilemap_layer.tile_set
 	else:
-		print("TileSet not found in primary_tilemap_layer")
+		print(\"TileSet not found in primary_tilemap_layer\")
 		return null
 
 func set_tiles_solid_from_groups() -> void:
 	if not primary_tilemap_layer or not tileset:
-		print("Cannot set tiles solid: No primary_tilemap_layer or tileset found")
+		print(\"Cannot set tiles solid: No primary_tilemap_layer or tileset found\")
 		return
 	
 	if not astar_grid:
-		print("Cannot set tiles solid: AStarGrid2D not initialized")
+		print(\"Cannot set tiles solid: AStarGrid2D not initialized\")
 		return
 	
 	var used_cells = primary_tilemap_layer.get_used_cells()
-	var custom_data_layer_name = "Solid" # Custom property to set as solid
+	var custom_data_layer_name = \"Solid\" # Custom property to set as solid
 
 	for cell_coords in used_cells:
 		if not astar_grid.region.has_point(cell_coords):
@@ -337,7 +480,7 @@ func set_tiles_solid_from_groups() -> void:
 			var is_tile_solid = tile_data.get_custom_data(custom_data_layer_name)
 
 			if typeof(is_tile_solid) == TYPE_BOOL and is_tile_solid == true:
-				print("Tile set as solid at cell: ", cell_coords)
+				print(\"Tile set as solid at cell: \", cell_coords)
 				astar_grid.set_point_solid(cell_coords, true)
 			else:
 				continue
@@ -369,7 +512,7 @@ func show_movement_range() -> void:
 
 	movement_range_indicator.queue_redraw()
 
-	print("PlayerMovement: Showing movement range with ", highlight_tiles.size(), " tiles in range for SP: ", current_sp)
+	print(\"PlayerMovement: Showing movement range with \", highlight_tiles.size(), \" tiles in range for SP: \", current_sp)
 
 # Calculate tiles within movement range
 func get_tiles_in_range(start_pos: Vector2i, range_value: int) -> Array[Vector2i]:
@@ -378,12 +521,12 @@ func get_tiles_in_range(start_pos: Vector2i, range_value: int) -> Array[Vector2i
 	var queue: Array = []
 	
 	# Start with the starting position at distance 0
-	queue.push_back({"pos": start_pos, "dist": 0})
+	queue.push_back({\"pos\": start_pos, \"dist\": 0})
 	
 	while not queue.is_empty():
 		var current = queue.pop_front()
-		var pos = current["pos"]
-		var dist = current["dist"]
+		var pos = current[\"pos\"]
+		var dist = current[\"dist\"]
 		
 		# Skip if already visited or out of range
 		if visited.has(pos) or dist > range_value:
@@ -397,10 +540,10 @@ func get_tiles_in_range(start_pos: Vector2i, range_value: int) -> Array[Vector2i
 			
 			# Add adjacent tiles if still within range
 			if dist < range_value:
-				queue.push_back({"pos": Vector2i(pos.x + 1, pos.y), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x - 1, pos.y), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x, pos.y + 1), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x, pos.y - 1), "dist": dist + 1})
+				queue.push_back({\"pos\": Vector2i(pos.x + 1, pos.y), \"dist\": dist + 1})
+				queue.push_back({\"pos\": Vector2i(pos.x - 1, pos.y), \"dist\": dist + 1})
+				queue.push_back({\"pos\": Vector2i(pos.x, pos.y + 1), \"dist\": dist + 1})
+				queue.push_back({\"pos\": Vector2i(pos.x, pos.y - 1), \"dist\": dist + 1})
 	
 	return tiles_in_range
 
@@ -440,7 +583,7 @@ func _update_turn_based_visuals() -> void:
 		return
 	
 	# Connect to the _draw function if not already connected
-	if not movement_range_indicator.is_connected("draw", Callable(self, "_draw_movement_indicators")):
+	if not movement_range_indicator.is_connected(\"draw\", Callable(self, \"_draw_movement_indicators\")):
 		movement_range_indicator.draw.connect(_draw_movement_indicators)
 	
 	movement_range_indicator.queue_redraw()
@@ -481,9 +624,9 @@ func _draw_movement_indicators() -> void:
 
 # Override the existing handle_game_mode_changed function
 func handle_game_mode_changed(new_mode) -> void:
-	"""React to game mode changes"""
+	\"\"\"React to game mode changes\"\"\"
 	if is_turn_based_mode():
-		print("PlayerMovement: Switched to TURN_BASED mode.")
+		print(\"PlayerMovement: Switched to TURN_BASED mode.\")
 		# Stop any current movement immediately
 		cancel_current_movement()
 		
@@ -491,7 +634,7 @@ func handle_game_mode_changed(new_mode) -> void:
 		show_movement_range()
 		
 	else: # REAL_TIME mode
-		print("PlayerMovement: Switched to REAL_TIME mode.")
+		print(\"PlayerMovement: Switched to REAL_TIME mode.\")
 		# Hide turn-based visuals
 		movement_range_indicator.visible = false
 		highlight_tiles.clear()
@@ -500,7 +643,7 @@ func handle_game_mode_changed(new_mode) -> void:
 # Update existing _handle_turn_based_input to use our new visuals
 func _handle_turn_based_input(event: InputEvent) -> void:
 	if not stats_component:
-		print("PlayerMovement: No Stats component found. Cannot handle input.")
+		print(\"PlayerMovement: No Stats component found. Cannot handle input.\")
 		return
 	# Get world coordinates for mouse click and player position
 	var mouse_pos = player.get_global_mouse_position()
@@ -509,7 +652,7 @@ func _handle_turn_based_input(event: InputEvent) -> void:
 
 	# First check if the clicked cell is within the movement range
 	if not clicked_cell in highlight_tiles:
-		print("PlayerMovement: Clicked outside movement range")
+		print(\"PlayerMovement: Clicked outside movement range\")
 		return
 		
 	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position)
@@ -519,18 +662,18 @@ func _handle_turn_based_input(event: InputEvent) -> void:
 	var new_path = astar_grid.get_id_path(current_map_coords, clicked_cell)
 
 	if new_path.size() <= 1: # No path or path is just the current tile
-		print("PlayerMovement: No valid path found or target is current location.")
+		print(\"PlayerMovement: No valid path found or target is current location.\")
 		_reset_path()
 		return
 
 	# Check if we have enough SP for the path
 	var steps_needed = new_path.size() - 1
 	if steps_needed > stats_component.get_current_sp():
-		print("PlayerMovement: Not enough SP to take this path")
+		print(\"PlayerMovement: Not enough SP to take this path\")
 		return
 
 	if stats_component.spend_sp(steps_needed):
-		print("PlayerMovement: SP spent successfully for path")
+		print(\"PlayerMovement: SP spent successfully for path\")
 		path.clear()
 		for cell_id in new_path:
 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
@@ -538,7 +681,7 @@ func _handle_turn_based_input(event: InputEvent) -> void:
 		if movement_range_indicator: movement_range_indicator.queue_redraw()
 		_start_following_path()
 	else:
-		print("PlayerMovement: Failed to spend SP for path")
+		print(\"PlayerMovement: Failed to spend SP for path\")
 		return
 
 # Handle turn-based movement with proper SP cost handling
@@ -556,7 +699,7 @@ func handle_turn_based_movement(target_position: Vector2) -> void:
 	
 	# Only process clicks within movement range
 	if not target_cell in highlight_tiles:
-		print("PlayerMovement: Clicked outside movement range")
+		print(\"PlayerMovement: Clicked outside movement range\")
 		return
 	
 	# Get player's current cell
@@ -567,19 +710,19 @@ func handle_turn_based_movement(target_position: Vector2) -> void:
 	var new_path = astar_grid.get_id_path(player_cell, target_cell)
 	
 	if new_path.size() <= 1: # No path or path is just the current tile
-		print("PlayerMovement: No valid path found or target is current location.")
+		print(\"PlayerMovement: No valid path found or target is current location.\")
 		_reset_path()
 		return
 	
 	# Check if we have enough SP for the path
 	var steps_needed = new_path.size() - 1
 	if steps_needed > stats_component.get_current_sp():
-		print("PlayerMovement: Not enough SP to take this path")
+		print(\"PlayerMovement: Not enough SP to take this path\")
 		return
 	
 	# Spend SP and setup path
 	if stats_component.spend_sp(steps_needed):
-		print("PlayerMovement: SP spent successfully for path of %d steps" % steps_needed)
+		print(\"PlayerMovement: SP spent successfully for path of %d steps\" % steps_needed)
 		path.clear()
 		
 		# Convert path to world coordinates
@@ -589,15 +732,15 @@ func handle_turn_based_movement(target_position: Vector2) -> void:
 		if movement_range_indicator: movement_range_indicator.queue_redraw()
 		_start_following_path()
 	else:
-		print("PlayerMovement: Failed to spend SP for path")
+		print(\"PlayerMovement: Failed to spend SP for path\")
 		return
 
 # Handler for sp_changed signal
 func _on_sp_changed(_new_sp: int, _max_sp: int) -> void:
-	# Update the movement range visuals whenever SP changes from the Stats component
-	print("PlayerMovement: SP changed to %s, max SP is %s" % [_new_sp, _max_sp])
+    # Update the movement range visuals whenever SP changes from the Stats component
+	print(\"PlayerMovement: SP changed to %s, max SP is %s\" % [_new_sp, _max_sp])
 	if is_turn_based_mode():
-		print("PlayerMovement: Detected SP change from Stats. New SP: %s. Updating movement range." % _new_sp)
+		print(\"PlayerMovement: Detected SP change from Stats. New SP: %s. Updating movement range.\" % _new_sp)
 		show_movement_range() 
 		_update_turn_based_pathfinding_preview() 
 		if movement_range_indicator: movement_range_indicator.queue_redraw()
@@ -634,7 +777,7 @@ func _reset_path() -> void:
 func _start_following_path() -> void:
 	current_path_index = 0
 	current_phase = MovementPhase.FOLLOWING_PATH
-	emit_signal("movement_started")
+	emit_signal(\"movement_started\")
 
 # Get the tile size based on the tilemap
 func get_tile_size() -> float:
@@ -655,7 +798,7 @@ func draw_debug_markers(enable: bool = true) -> void:
 		return
 		
 	# Connect to the draw function if not already connected
-	if not movement_range_indicator.is_connected("draw", Callable(self, "_draw_debug_markers")):
+	if not movement_range_indicator.is_connected(\"draw\", Callable(self, \"_draw_debug_markers\")):
 		movement_range_indicator.draw.connect(_draw_debug_markers)
 	
 	movement_range_indicator.queue_redraw()
@@ -705,4 +848,48 @@ func toggle_debug_view() -> void:
 	else:
 		debug_view_enabled = true
 	draw_debug_markers(debug_view_enabled)
-	print("Debug view ", "enabled" if debug_view_enabled else "disabled")
+	print(\"Debug view \", \"enabled\" if debug_view_enabled else \"disabled\")
+"
+
+[node name="Player" type="CharacterBody2D"]
+safe_margin = 0.2
+script = ExtResource("1_fd065")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -20)
+sprite_frames = SubResource("SpriteFrames_hbkom")
+animation = &"walking_right"
+autoplay = "idle"
+frame_progress = 0.558405
+
+[node name="PlayerMovement" type="Node2D" parent="."]
+position = Vector2(0, 11)
+script = SubResource("GDScript_fd065")
+cell_size = null
+speed = null
+y_offset = null
+turn_based_tile_highlight_color = Color(0.670588, 0.0431373, 0.313726, 0.894118)
+turn_based_path_highlight_color = null
+turn_based_invalid_tile_color = null
+
+[node name="WorldPlace" type="CollisionPolygon2D" parent="."]
+position = Vector2(0, 11)
+polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -16, -13)
+
+[node name="Hitbox" type="Area2D" parent="."]
+position = Vector2(0, 11)
+collision_layer = 2
+collision_mask = 16
+
+[node name="Hitbox" type="CollisionPolygon2D" parent="Hitbox"]
+polygon = PackedVector2Array(-2, -10, 3, -13, -3, -16, -9, -13)
+
+[node name="Abilitys" type="Marker2D" parent="."]
+script = ExtResource("4_svriy")
+known_abilities = Array[ExtResource("5_fd065")]([ExtResource("6_0uenp")])
+
+[node name="TurnBasedAgent" type="Node" parent="."]
+script = ExtResource("7_fd065")
+
+[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+script = ExtResource("7_0uenp")

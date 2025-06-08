@@ -1,20 +1,22 @@
-extends Node
+extends Resource
 
 class_name Stats
 
 signal health_changed(current_health, max_health)
 signal ap_changed(current_ap, max_ap)
 signal sp_changed(current_sp, max_sp)
+signal died()
 
 @export var level: int = 1
 @export var max_health: int = 100
-var _current_health: 
-	get: return _current_health
+var _current_health: int: 
 	set(value):
 		var previous_health = _current_health
 		_current_health = clamp(value, 0, max_health)
 		if _current_health != previous_health:
 			health_changed.emit(_current_health, max_health)
+			if _current_health <= 0:
+				died.emit()
 
 @export var max_action_points: int = 6
 var _current_ap: 
@@ -38,19 +40,22 @@ var _current_sp:
 @export var defense: int = 5
 @export var magic_power: int = 15
 @export var magic_defense: int = 3
+@export var initiative: int = 10
 
 
-func _ready():
+func initialize_stats():
 	_current_health = max_health
 	_current_ap = max_action_points
-	_current_sp = max_step_points # Initialize SP
+	_current_sp = max_step_points 
 
 func take_damage(damage_amount: int):
 	var effective_damage = damage_amount
+	if effective_damage < 0:
+		effective_damage = 1
 	self.current_health -= effective_damage
 
-# func is_alive() -> bool:
-# 	return current_health > 0
+func is_alive() -> bool:
+	return _current_health > 0
 
 # --- AP Methods ---
 func get_current_ap() -> int:
