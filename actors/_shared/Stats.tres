@@ -1,11 +1,14 @@
-[gd_resource type="Resource" script_class="Stats" load_steps=2 format=3 uid="uid://rh235su4rx2k"]
+[gd_resource type="Resource" script_class="Stats" load_steps=3 format=3 uid="uid://rh235su4rx2k"]
 
+[ext_resource type="Texture2D" uid="uid://b30kb16se5rxd" path="res://icon.svg" id="1_ca7ok"]
 [ext_resource type="Script" uid="uid://uua0isc2hiex" path="res://actors/_shared/stats.gd" id="1_j63sg"]
 
 [resource]
 script = ExtResource("1_j63sg")
+name = "Unknown"
+portrait_texture = ExtResource("1_ca7ok")
 level = 1
-max_health = 100
+max_health = 150
 max_action_points = 6
 max_step_points = 6
 attack_power = 10

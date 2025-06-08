@@ -5,7 +5,7 @@ signal party_updated
 
 const MAX_PARTY_SIZE = 4
 
-var main_character: Node = null
+var main_character: Node
 var active_allies: Dictionary = {}
 
 func register_main_character(character_node: Node):
@@ -23,6 +23,7 @@ func register_main_character(character_node: Node):
 	active_allies[1] = slot_data
 
 	party_updated.emit()
+	print("PartyManager: Main character %s registered in slot 1." % main_character.name)
 
 # Call this when the game starts or player character is created
 func add_member_to_party(character_node: Node):

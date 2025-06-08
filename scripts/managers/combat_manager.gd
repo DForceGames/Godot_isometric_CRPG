@@ -9,13 +9,13 @@ signal new_round_started(round_number)
 var npc_id
 
 var turn_queue: Array[Node] = []
-var turn_index: int = -1
+var turn_index: int = 0
 var round_number: int = 1
 var is_combat_ended: bool = false
 
 func start_combat(player_party, enemies):
 	turn_queue.clear()
-	turn_index = -1
+	turn_index = 0
 	round_number = 1
 
 	var combatants_with_rolls = []
@@ -106,7 +106,7 @@ func next_turn():
 	
 	# Check turn and round progression
 	if turn_index >= turn_queue.size():
-		turn_index = -1
+		turn_index = 0
 		round_number += 1
 		new_round_started.emit(round_number)
 	

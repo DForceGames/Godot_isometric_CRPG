@@ -1,0 +1,63 @@
+[gd_scene load_steps=11 format=3 uid="uid://cr8jtroliuprq"]
+
+[ext_resource type="PackedScene" uid="uid://dqf8ajeprmka5" path="res://actors/enemy/enemy.tscn" id="1_k78t3"]
+[ext_resource type="Texture2D" uid="uid://frgw075meapa" path="res://art_source/sprites/Characters/goblin/Orc-Idle.png" id="2_kmam8"]
+[ext_resource type="Resource" uid="uid://4tbissoao0tn" path="res://actors/enemy/goblin_stats.tres" id="2_m1at2"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m1at2"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(0, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_67tol"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(100, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ulwqg"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(200, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_igc6w"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(300, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m4u4k"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(400, 0, 100, 100)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_s5y8q"]
+atlas = ExtResource("2_kmam8")
+region = Rect2(500, 0, 100, 100)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_lnp10"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_m1at2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_67tol")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ulwqg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_igc6w")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_m4u4k")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_s5y8q")
+}],
+"loop": true,
+"name": &"Idle",
+"speed": 10.0
+}]
+
+[node name="Enemy" instance=ExtResource("1_k78t3")]
+stats = ExtResource("2_m1at2")
+
+[node name="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = SubResource("SpriteFrames_lnp10")
+animation = &"Idle"
+frame_progress = 0.202988

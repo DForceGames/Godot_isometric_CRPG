@@ -7,6 +7,8 @@ signal ap_changed(current_ap, max_ap)
 signal sp_changed(current_sp, max_sp)
 signal died()
 
+@export var name: String = "Unknown"
+@export var portrait_texture: Texture2D
 @export var level: int = 1
 @export var max_health: int = 100
 var _current_health: int: 

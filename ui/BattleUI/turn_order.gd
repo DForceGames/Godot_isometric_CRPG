@@ -2,7 +2,7 @@ extends PanelContainer
 
 const TurnOrderIcon = preload("res://ui/BattleUI/character_icon_display.tscn")
 
-@onready var container: HBoxContainer = $HBoxContainer
+@onready var container: HBoxContainer =  %CharacterContainer
 
 func populate(turn_queue: Array[Node]):
 	clear_icons()

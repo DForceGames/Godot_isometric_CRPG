@@ -6,8 +6,6 @@ var opened_containers: Array = []
 var current_combat_instance: Node = null
 var exploration_scene_node: Node = null # To return to
 
-@export var combat_scene_path = "res://scenes/combat/combat_scene.tscn"
-
 enum GameMode {
 	REAL_TIME,
 	TURN_BASED
@@ -19,6 +17,11 @@ var current_mode: GameMode = GameMode.REAL_TIME:
 			current_mode = new_mode
 			game_mode_changed.emit(current_mode)
 			print("Game mode switched to: ", GameMode.keys()[current_mode])
+
+# Battle variables
+var pending_battle_data: Dictionary = {} 
+var return_to_scene: String = ""
+var return_to_position: Vector2 = Vector2.ZERO
 
 signal game_mode_changed(new_mode: GameMode)
 
@@ -40,4 +43,13 @@ func is_real_time() -> bool:
 func is_turn_based() -> bool:
 	return current_mode == GameMode.TURN_BASED
 
-# Optional: Add functions to pause/resume parts of the game,
+func prepare_for_battle(battle_data: Dictionary):
+	pending_battle_data = battle_data
+	return_to_scene = get_tree().current_scene.scene_file_path
+
+	var player = get_tree().get_first_node_in_group("Player")
+	if player:
+		return_to_position = player.global_position
+
+	get_tree().change_scene_to_file(battle_data["battle_map"])
+	

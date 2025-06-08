@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 @onready var action_bar = $ActionBar
-@onready var turn_order_display = $TurnOrderDisplay
+@onready var turn_order_display = $TurnOrder
 
 @onready var anim_player = $AnimationPlayer
 
@@ -22,7 +22,9 @@ func _ready():
 func _on_combat_started(turn_queue: Array[Node]):
 	# Make the entire battle UI visible with an animation
 	visible = true
-	anim_player.play("show") # Assuming you have a "show" animation
+	# anim_player.play("show") # Assuming you have a "show" animation
+
+	await turn_order_display.ready
 
 	# Tell the TurnOrderDisplay to populate itself with the combatants
 	turn_order_display.populate(turn_queue)
@@ -37,4 +39,4 @@ func _on_combat_ended(_result: String):
 	turn_order_display.clear_icons()
 
 func _on_turn_started(character_node: Node):
-	turn_order_display.update_active_character(character_node)
+	turn_order_display.update_active_icon(character_node)

@@ -20,6 +20,7 @@ var current_path_index: int = 0
 var final_target_world_position: Vector2
 var current_step_target_world_position: Vector2
 var blocking_groups = ["NPC", "Solid", "Obstacle", "blocking_tilemap", "Container"]
+var freeroam_target_position: Vector2
 
 # Signals
 signal path_completed
@@ -53,6 +54,17 @@ func _ready() -> void:
 		printerr("PlayerMovement: Parent is not a CharacterBody2D. Movement system needs to be a child of the player.")
 		return
 
+	freeroam_target_position = player.global_position
+
+	# var current_scene = get_tree().current_scene
+
+	# if current_scene:
+	# 	primary_tilemap_layer = current_scene.find_child("Ground", true, false) as TileMapLayer
+	
+	# if not primary_tilemap_layer:
+	# 	printerr("PlayerMovement: PrimaryTileMapLayer not found in scene root. Movement system requires a TileMapLayer.")
+	# 	return
+
 	stats_component = player.stats
 	if not stats_component:
 		printerr("PlayerMovement: Player does not have a Stats component. Movement system requires Stats for SP management.")
@@ -61,9 +73,6 @@ func _ready() -> void:
 			stats_component.sp_changed.connect(_on_sp_changed)
 		if is_turn_based_mode():
 			show_movement_range()
-			
-	final_target_world_position = player.global_position
-	current_step_target_world_position = player.global_position
 	
 	# Get the GameStateManager singleton
 	game_state_manager = get_node_or_null("/root/GameStateManager")
@@ -79,7 +88,7 @@ func _ready() -> void:
 		connect("sp_changed", Callable(self, "_on_sp_changed"))
 
 func initialize_grid() -> void:
-	if primary_tilemap_layer == null:
+	if not primary_tilemap_layer:
 		print("Cannot initialize grid: No primary_tilemap_layer set")
 		return
 	
@@ -90,7 +99,7 @@ func initialize_grid() -> void:
 			return
 
 	# Now you can use the primary_tilemap_layer to determine grid size if needed
-	grid_size = Rect2i(Vector2i.ZERO, Vector2i(100, 100))  # Example region, adjust as needed
+	grid_size = Rect2i(Vector2i.ZERO, Vector2i(100, 100)) 
 	print("Grid initialized with size: ", grid_size)
 	astar_grid.region = grid_size  # Use the region property directly with Rect2i
 	astar_grid.offset = cell_size / 2  # Center the grid on the origin
@@ -480,117 +489,173 @@ func _draw_movement_indicators() -> void:
 			movement_range_indicator.draw_colored_polygon(points, turn_based_tile_highlight_color)
 
 # Override the existing handle_game_mode_changed function
-func handle_game_mode_changed(new_mode) -> void:
-	"""React to game mode changes"""
-	if is_turn_based_mode():
-		print("PlayerMovement: Switched to TURN_BASED mode.")
-		# Stop any current movement immediately
-		cancel_current_movement()
-		
-		# Show movement range when entering turn-based mode
+func _handle_game_mode_changed(new_mode):
+	if new_mode == GameStateManager.GameMode.TURN_BASED:
+		print("PlayerMovement: Switching to turn-based mode")
+
+		var current_scene = get_tree().current_scene
+		if current_scene:
+			primary_tilemap_layer = current_scene.find_child("Ground", true, false) as TileMapLayer
+			
+		if not primary_tilemap_layer:
+			printerr("PlayerMovement: PrimaryTileMapLayer not found in scene root. Movement system requires a TileMapLayer.")
+			return
+
+		initialize_grid()
 		show_movement_range()
-		
-	else: # REAL_TIME mode
-		print("PlayerMovement: Switched to REAL_TIME mode.")
-		# Hide turn-based visuals
-		movement_range_indicator.visible = false
-		highlight_tiles.clear()
-		current_path_tiles.clear()
 
-# Update existing _handle_turn_based_input to use our new visuals
-func _handle_turn_based_input(event: InputEvent) -> void:
-	if not stats_component:
-		print("PlayerMovement: No Stats component found. Cannot handle input.")
-		return
-	# Get world coordinates for mouse click and player position
-	var mouse_pos = player.get_global_mouse_position()
-	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
-	var clicked_cell = primary_tilemap_layer.local_to_map(local_mouse_pos)
-
-	# First check if the clicked cell is within the movement range
-	if not clicked_cell in highlight_tiles:
-		print("PlayerMovement: Clicked outside movement range")
-		return
-		
-	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position)
-	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
-
-	# Calculate path to the target cell
-	var new_path = astar_grid.get_id_path(current_map_coords, clicked_cell)
-
-	if new_path.size() <= 1: # No path or path is just the current tile
-		print("PlayerMovement: No valid path found or target is current location.")
-		_reset_path()
-		return
-
-	# Check if we have enough SP for the path
-	var steps_needed = new_path.size() - 1
-	if steps_needed > stats_component.get_current_sp():
-		print("PlayerMovement: Not enough SP to take this path")
-		return
-
-	if stats_component.spend_sp(steps_needed):
-		print("PlayerMovement: SP spent successfully for path")
+	elif new_mode == GameStateManager.GameMode.REAL_TIME:
+		print("PlayerMovement: Switching to real-time mode")
+		if movement_range_indicator:
+			movement_range_indicator.visible = false
 		path.clear()
-		for cell_id in new_path:
-			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
 
-		if movement_range_indicator: movement_range_indicator.queue_redraw()
-		_start_following_path()
+func handle_freeroam_movement(target_position: Vector2):
+	self.freeroam_target_position = target_position
+
+func set_movement_target(target_position: Vector2):
+	if not is_turn_based_mode():
+		handle_freeroam_movement(target_position)
 	else:
-		print("PlayerMovement: Failed to spend SP for path")
+		handle_grid_movement(target_position)
+
+func handle_grid_movement(target_position: Vector2):
+	if not stats_component or not primary_tilemap_layer:
+		print("PlayerMovement: No Stats component or TileMapLayer found. Cannot handle grid movement.")
 		return
 
-# Handle turn-based movement with proper SP cost handling
-func handle_turn_based_movement(target_position: Vector2) -> void:
-	if not is_turn_based_mode() or not stats_component or not primary_tilemap_layer:
-		# Fall back to real-time pathfinding if not in turn-based mode
-		start = player.global_position
-		end = target_position
-		get_ideal_path()
-		return
-	
-	# Get target cell coordinates
-	var local_target_pos = primary_tilemap_layer.to_local(target_position)
-	var target_cell = primary_tilemap_layer.local_to_map(local_target_pos)
-	
-	# Only process clicks within movement range
+	var target_cell = primary_tilemap_layer.local_to_map(target_position)
 	if not target_cell in highlight_tiles:
 		print("PlayerMovement: Clicked outside movement range")
 		return
-	
-	# Get player's current cell
-	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-	var player_cell = primary_tilemap_layer.local_to_map(player_local_pos)
-	
-	# Calculate path to the target cell
+
+	var player_cell = primary_tilemap_layer.local_to_map(player.global_position)
 	var new_path = astar_grid.get_id_path(player_cell, target_cell)
-	
+
 	if new_path.size() <= 1: # No path or path is just the current tile
 		print("PlayerMovement: No valid path found or target is current location.")
-		_reset_path()
 		return
 	
-	# Check if we have enough SP for the path
 	var steps_needed = new_path.size() - 1
-	if steps_needed > stats_component.get_current_sp():
-		print("PlayerMovement: Not enough SP to take this path")
-		return
-	
-	# Spend SP and setup path
-	if stats_component.spend_sp(steps_needed):
-		print("PlayerMovement: SP spent successfully for path of %d steps" % steps_needed)
+	var sp_cost = steps_needed  # 1 SP per tile
+
+	if stats_component.spend_sp(sp_cost):
 		path.clear()
-		
-		# Convert path to world coordinates
 		for cell_id in new_path:
 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
-		
-		if movement_range_indicator: movement_range_indicator.queue_redraw()
 		_start_following_path()
-	else:
-		print("PlayerMovement: Failed to spend SP for path")
+
+func _physics_process(_delta: float):
+	if not is_instance_valid(player):
 		return
+
+	if is_turn_based_mode():
+		if path.size() > 0:
+			follow_path()
+		else:
+			player.velocity = Vector2.ZERO  # Stop movement if no path
+	else:
+		var distance_to_target = player.global_position.distance_to(freeroam_target_position)
+		if distance_to_target < 1.5:  
+			player.velocity = Vector2.ZERO
+		else:
+			var direction = player.global_position.direction_to(freeroam_target_position)
+			player.velocity = direction * speed
+
+# # Update existing _handle_turn_based_input to use our new visuals
+# func _handle_turn_based_input(event: InputEvent) -> void:
+# 	if not stats_component:
+# 		print("PlayerMovement: No Stats component found. Cannot handle input.")
+# 		return
+# 	# Get world coordinates for mouse click and player position
+# 	var mouse_pos = player.get_global_mouse_position()
+# 	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
+# 	var clicked_cell = primary_tilemap_layer.local_to_map(local_mouse_pos)
+
+# 	# First check if the clicked cell is within the movement range
+# 	if not clicked_cell in highlight_tiles:
+# 		print("PlayerMovement: Clicked outside movement range")
+# 		return
+		
+# 	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position)
+# 	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
+
+# 	# Calculate path to the target cell
+# 	var new_path = astar_grid.get_id_path(current_map_coords, clicked_cell)
+
+# 	if new_path.size() <= 1: # No path or path is just the current tile
+# 		print("PlayerMovement: No valid path found or target is current location.")
+# 		_reset_path()
+# 		return
+
+# 	# Check if we have enough SP for the path
+# 	var steps_needed = new_path.size() - 1
+# 	if steps_needed > stats_component.get_current_sp():
+# 		print("PlayerMovement: Not enough SP to take this path")
+# 		return
+
+# 	if stats_component.spend_sp(steps_needed):
+# 		print("PlayerMovement: SP spent successfully for path")
+# 		path.clear()
+# 		for cell_id in new_path:
+# 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
+
+# 		if movement_range_indicator: movement_range_indicator.queue_redraw()
+# 		_start_following_path()
+# 	else:
+# 		print("PlayerMovement: Failed to spend SP for path")
+# 		return
+
+# Handle turn-based movement with proper SP cost handling
+# func handle_turn_based_movement(target_position: Vector2) -> void:
+# 	if not is_turn_based_mode() or not stats_component or not primary_tilemap_layer:
+# 		# Fall back to real-time pathfinding if not in turn-based mode
+# 		start = player.global_position
+# 		end = target_position
+# 		get_ideal_path()
+# 		return
+	
+# 	# Get target cell coordinates
+# 	var local_target_pos = primary_tilemap_layer.to_local(target_position)
+# 	var target_cell = primary_tilemap_layer.local_to_map(local_target_pos)
+	
+# 	# Only process clicks within movement range
+# 	if not target_cell in highlight_tiles:
+# 		print("PlayerMovement: Clicked outside movement range")
+# 		return
+	
+# 	# Get player's current cell
+# 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
+# 	var player_cell = primary_tilemap_layer.local_to_map(player_local_pos)
+	
+# 	# Calculate path to the target cell
+# 	var new_path = astar_grid.get_id_path(player_cell, target_cell)
+	
+# 	if new_path.size() <= 1: # No path or path is just the current tile
+# 		print("PlayerMovement: No valid path found or target is current location.")
+# 		_reset_path()
+# 		return
+	
+# 	# Check if we have enough SP for the path
+# 	var steps_needed = new_path.size() - 1
+# 	if steps_needed > stats_component.get_current_sp():
+# 		print("PlayerMovement: Not enough SP to take this path")
+# 		return
+	
+# 	# Spend SP and setup path
+# 	if stats_component.spend_sp(steps_needed):
+# 		print("PlayerMovement: SP spent successfully for path of %d steps" % steps_needed)
+# 		path.clear()
+		
+# 		# Convert path to world coordinates
+# 		for cell_id in new_path:
+# 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
+		
+# 		if movement_range_indicator: movement_range_indicator.queue_redraw()
+# 		_start_following_path()
+# 	else:
+# 		print("PlayerMovement: Failed to spend SP for path")
+# 		return
 
 # Handler for sp_changed signal
 func _on_sp_changed(_new_sp: int, _max_sp: int) -> void:
