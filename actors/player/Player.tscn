@@ -138,7 +138,7 @@ animations = [{
 "speed": 10.0
 }]
 
-[node name="Player" type="CharacterBody2D"]
+[node name="Player" type="CharacterBody2D" groups=["Player"]]
 safe_margin = 0.2
 script = ExtResource("1_fd065")
 stats = ExtResource("2_fd065")

@@ -35,7 +35,7 @@ func _ready() -> void:
 	if combat_manager:
 		combat_manager.combat_started.connect(on_combat_started)
 		combat_manager.combat_ended.connect(on_combat_ended)
-		combat_manager.turn_started.connect(on_turn_start)
+		combat_manager.turn_started.connect(on_combat_manager_turn_started)
 	
 	# Get player stats
 	if not stats:
@@ -48,14 +48,13 @@ func _ready() -> void:
 	stats.died.connect(_on_died)
 
 func _input(event: InputEvent) -> void:
+	if combat_manager and combat_manager.is_combat_ended and not is_my_turn:
+		return
+
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
 		var target_pos = get_global_mouse_position()
 		movement_system.set_movement_target(target_pos)
 		print("Player: Right-clicked to move to position ", target_pos)
-
-	# # Ignore input during combat when it's not the player's turn
-	# if combat_manager and combat_manager.is_combat_ended and not is_my_turn:
-	# 	return
 	
 	# if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
 	# 	return
@@ -88,10 +87,7 @@ func on_combat_manager_turn_started(combatant):
 		stats.on_turn_started()
 	else:
 		is_my_turn = false
-
-func on_turn_start():
-	is_my_turn = true
-	stats.on_turn_started()
+		print("Player: Not my turn anymore")
 
 func _on_health_changed(current_health, max_health):
 	emit_signal("health_changed", current_health, max_health)
@@ -111,21 +107,14 @@ func take_damage(damage_amount):
 		return
 	stats.take_damage(damage_amount)
 
+func is_dead() -> bool:
+	if not stats: return true
+	return not stats.is_alive()
+
 # Simple function to tell movement system where to go
 func _on_game_mode_changed(new_mode):
 	if movement_system:
 		movement_system._handle_game_mode_changed(new_mode)
-
-# func move_to_position(target_pos: Vector2) -> void:
-# 	if not movement_system:
-# 		return
-	
-# 	# Check if we're in turn-based mode
-# 	if game_state_manager and game_state_manager.is_turn_based():
-# 		# Let the movement system handle turn-based movement with SP costs
-# 		movement_system.handle_grid_movement(target_pos)
-# 	else:
-# 		movement_system.handle_real_time_movement(target_pos)
 
 func _physics_process(_delta: float) -> void:
 	if velocity.length_squared() > 0:
@@ -212,17 +201,3 @@ func end_npc_interaction() -> void:
 		current_nearby_npc.end_interaction()
 		current_nearby_npc = null
 
-# Resouces -------------------------------------------------------------------------------------
-
-# func refresh_resources() -> void:
-	
-# 	# Reset any other resources as needed
-# 	print("Player resources refreshed")
-	
-# 	# Optionally reset inventory or other game state
-# 	# if game_state_manager:
-# 	# 	game_state_manager.refresh_inventory()
-
-# 	if movement_system:
-# 		movement_system.current_sp = Stats.max_sp
-# 		emit_signal("_on_sp_changed", movement_system.current_sp)

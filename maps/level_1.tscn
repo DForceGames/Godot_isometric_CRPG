@@ -80,7 +80,7 @@ position = Vector2(516, 176)
 [node name="grassland" type="Area2D" parent="."]
 position = Vector2(-132, 5)
 script = ExtResource("6_egu6l")
-enemy_scene_path = Array[String](["res://actors/enemy/goblin.tscn", "res://actors/enemy/goblin.tscn"])
+enemy_scene_path = Array[String](["res://actors/enemy/goblin.tscn"])
 battle_scene_name = "grassland"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="grassland"]

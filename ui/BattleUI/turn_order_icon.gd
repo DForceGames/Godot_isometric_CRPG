@@ -1,6 +1,6 @@
 extends PanelContainer
 
-@onready var portait_rect: TextureRect = $PortraitRect
+@onready var portait_rect: TextureRect = $CharacterDisplayContainer
 
 var character: Node = null
 

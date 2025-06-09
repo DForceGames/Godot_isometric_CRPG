@@ -30,11 +30,7 @@ func switch_to_real_time():
 
 func switch_to_turn_based():
 	self.current_mode = GameMode.TURN_BASED
-	var player_party = PartyManager.get_current_party()
-	var enemies = get_tree().get_nodes_in_group("enemies")
-
-	var combat_manager = get_node_or_null("/root/CombatManager")
-	combat_manager.start_combat(player_party, enemies)
+	game_mode_changed.emit(current_mode)
 	UiManager.show_battle_ui()
 
 func is_real_time() -> bool:
@@ -44,12 +40,14 @@ func is_turn_based() -> bool:
 	return current_mode == GameMode.TURN_BASED
 
 func prepare_for_battle(battle_data: Dictionary):
-	pending_battle_data = battle_data
-	return_to_scene = get_tree().current_scene.scene_file_path
+	self.pending_battle_data = battle_data
+	print("GameStateManager: Preparing for battle with data: ", battle_data)
 
-	var player = get_tree().get_first_node_in_group("Player")
-	if player:
-		return_to_position = player.global_position
+	self.return_to_scene = get_tree().current_scene.scene_file_path
+	var player = PartyManager.main_character
+	if is_instance_valid(player):
+		self.return_to_position = player.global_position
 
-	get_tree().change_scene_to_file(battle_data["battle_map"])
-	
+	PartyManager.make_party_persistent_for_transition()
+
+	get_tree().call_deferred("change_scene_to_file", battle_data["battle_map"])

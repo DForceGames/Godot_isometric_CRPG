@@ -26,7 +26,7 @@ var freeroam_target_position: Vector2
 signal path_completed
 signal movement_started
 signal step_taken(remaining_steps: int)
-# signal sp_changed(new_sp: int)
+signal sp_changed(current_sp, max_sp)
 
 var astar_grid = AStarGrid2D.new()
 var grid_size

@@ -32,10 +32,9 @@ func start_combat(player_party, enemies):
 	
 	for enemy in enemies:
 		if is_instance_valid(enemy):
-			combatants_with_rolls.append({"Node": enemy,"Roll": enemy.initiative})
+			combatants_with_rolls.append({"Node": enemy,"Roll": enemy.stats.initiative})
 	
 	combatants_with_rolls.sort_custom(func(a, b): return a.Roll > b.Roll)
-	print("CombatManager: Combat started with turnorder:" + str(turn_queue))
 
 	for combatant_data in combatants_with_rolls:
 		var combatant = combatant_data["Node"]
@@ -44,6 +43,7 @@ func start_combat(player_party, enemies):
 			combatant.on_start_combat()
 
 	combat_started.emit(turn_queue)
+	print("CombatManager: Combatants sorted by initiative rolls:", turn_queue)
 
 	next_turn()
 
@@ -81,11 +81,11 @@ func check_end_of_combat_conditions():
 	var enemy_combatants_alive = false
 
 	for combatant in turn_queue:
-		if combatant.is_dead:
+		if combatant.is_dead():
 			continue
-		if combatant.is_player:
+		if combatant.is_in_group("Player"):
 			player_combatants_alive = true
-		elif combatant.is_enemy:
+		elif combatant.is_in_group("Enemy"):
 			enemy_combatants_alive = true
 
 	if not player_combatants_alive:

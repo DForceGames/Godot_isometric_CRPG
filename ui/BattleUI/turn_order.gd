@@ -6,7 +6,7 @@ const TurnOrderIcon = preload("res://ui/BattleUI/character_icon_display.tscn")
 
 func populate(turn_queue: Array[Node]):
 	clear_icons()
-	
+	print("Populating turn order with characters: ", turn_queue)
 	for character in turn_queue:
 		var icon_instance = TurnOrderIcon.instance()
 		icon_instance.set_character_data(character)

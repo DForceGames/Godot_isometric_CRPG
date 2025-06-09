@@ -1,36 +1,45 @@
-[gd_scene load_steps=11 format=3 uid="uid://cr8jtroliuprq"]
+[gd_scene load_steps=11 format=3 uid="uid://bqrhm767mfvi3"]
 
-[ext_resource type="PackedScene" uid="uid://dqf8ajeprmka5" path="res://actors/enemy/enemy.tscn" id="1_k78t3"]
+[ext_resource type="Script" uid="uid://dfle2853d51yq" path="res://actors/enemy/enemy.gd" id="1_kmam8"]
 [ext_resource type="Texture2D" uid="uid://frgw075meapa" path="res://art_source/sprites/Characters/goblin/Orc-Idle.png" id="2_kmam8"]
-[ext_resource type="Resource" uid="uid://4tbissoao0tn" path="res://actors/enemy/goblin_stats.tres" id="2_m1at2"]
+[ext_resource type="Resource" uid="uid://beq85kk5c7r0v" path="res://actors/enemy/goblin_stats.tres" id="2_m1at2"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_m1at2"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_adtln"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(0, 0, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_67tol"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_k78t3"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(100, 0, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_ulwqg"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_kmam8"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(200, 0, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_igc6w"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_m1at2"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(300, 0, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_m4u4k"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_67tol"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(400, 0, 100, 100)
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_s5y8q"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_ulwqg"]
 atlas = ExtResource("2_kmam8")
 region = Rect2(500, 0, 100, 100)
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_lnp10"]
+[sub_resource type="SpriteFrames" id="SpriteFrames_igc6w"]
 animations = [{
 "frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_adtln")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_k78t3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kmam8")
+}, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_m1at2")
 }, {
@@ -39,25 +48,19 @@ animations = [{
 }, {
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_ulwqg")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_igc6w")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_m4u4k")
-}, {
-"duration": 1.0,
-"texture": SubResource("AtlasTexture_s5y8q")
 }],
 "loop": true,
-"name": &"Idle",
-"speed": 10.0
+"name": &"default",
+"speed": 5.0
 }]
 
-[node name="Enemy" instance=ExtResource("1_k78t3")]
+[node name="Goblin" type="CharacterBody2D" groups=["Enemy"]]
+script = ExtResource("1_kmam8")
 stats = ExtResource("2_m1at2")
 
-[node name="AnimatedSprite2D" parent="." index="0"]
-sprite_frames = SubResource("SpriteFrames_lnp10")
-animation = &"Idle"
-frame_progress = 0.202988
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_igc6w")
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="."]
+position = Vector2(1, 25)
+polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -13, -12)

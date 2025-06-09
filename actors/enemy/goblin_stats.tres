@@ -1,17 +1,21 @@
-[gd_resource type="Resource" script_class="Stats" load_steps=3 format=3 uid="uid://4tbissoao0tn"]
+[gd_resource type="Resource" script_class="Stats" load_steps=4 format=3 uid="uid://beq85kk5c7r0v"]
 
-[ext_resource type="Texture2D" uid="uid://ck281iuin2w6a" path="res://art_source/ui/portraits/default_portrait.png" id="1_01xks"]
+[ext_resource type="Texture2D" uid="uid://bdh3cd86jro1e" path="res://art_source/sprites/Characters/goblin/Orc.png" id="1_01xks"]
 [ext_resource type="Script" uid="uid://uua0isc2hiex" path="res://actors/_shared/stats.gd" id="1_mou1f"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3ski7"]
+atlas = ExtResource("1_01xks")
+region = Rect2(31, 29, 46, 44)
 
 [resource]
 script = ExtResource("1_mou1f")
-name = "Goblin"
-portrait_texture = ExtResource("1_01xks")
+name = "Unknown"
+portrait_texture = SubResource("AtlasTexture_3ski7")
 level = 1
 max_health = 50
-max_action_points = 4
+max_action_points = 6
 max_step_points = 6
-attack_power = 8
+attack_power = 10
 defense = 5
 magic_power = 15
 magic_defense = 3

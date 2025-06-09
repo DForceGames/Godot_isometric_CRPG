@@ -1,39 +1,80 @@
-extends Node2D
+# The Final Enemy.gd Script
+extends CharacterBody2D # It's better to use CharacterBody2D for physics and movement
 
 @export var stats: Stats
 
+# This script will connect to signals when it's ready.
+func _ready():
+	var combat_manager = get_node_or_null("/root/CombatManager")
+	if combat_manager:
+		# Connect to the turn_started signal with our new, correct handler
+		if not combat_manager.turn_started.is_connected(_on_turn_started):
+			combat_manager.turn_started.connect(_on_turn_started)
+		
+		# Also, let's connect to the combat_ended signal for cleanup
+		if not combat_manager.combat_ended.is_connected(_on_combat_ended):
+			combat_manager.combat_ended.connect(_on_combat_ended)
+	
+	if not stats:
+		printerr("Enemy: No stats resource assigned!")
+		return
+	stats.initialize_stats()
+	# stats.health_changed.connect(_on_health_changed)
+	# stats.ap_changed.connect(_on_ap_changed)
+	# stats.sp_changed.connect(_on_sp_changed)
+	# stats.died.connect(_on_died)
+
+# --- Signal Handlers ---
+
+func _on_turn_started(combatant_whose_turn_it_is: Node):
+	# This function runs every time ANYONE's turn starts.
+	# We check if the turn is for this specific instance.
+	if combatant_whose_turn_it_is == self:
+		print("Enemy '", name, "': My turn has begun!")
+		
+		# Replenish stats and then execute the AI logic
+		if stats:
+			stats.on_turn_started()
+		execute_turn()
+
+func _on_combat_ended(_result: String):
+	# When combat is over, this enemy should be removed from the battle map.
+	print("Enemy '", name, "': Combat is over. Fading away...")
+	queue_free()
+
+
+# --- AI and Action Logic ---
+
 func execute_turn():
-	print("Executing turn for: ", stats.name)
+	print("Executing turn for: ", name)
 
 	var closest_player = null
 	var min_distance = INF
 
+	# This name must match the function in your PartyManager!
 	for player_character in PartyManager.get_current_party():
+		# Safety check for the player character
+		if not is_instance_valid(player_character):
+			continue
+			
 		var distance = self.global_position.distance_to(player_character.global_position)
 		if distance < min_distance:
 			min_distance = distance
 			closest_player = player_character
 
-		if closest_player:
-			print("Closest player to %s is %s at distance %.2f" % [stats.name, closest_player.stats.name, min_distance])
-			# Here you can add logic for the enemy's action against the closest player
-			# For example, attacking or moving towards them
-			# Example: closest_player.stats.take_damage(10)
+	# This block now correctly runs AFTER the loop has finished.
+	if closest_player:
+		print("Closest player to %s is %s." % [name, closest_player.name])
+		# TODO: Add attack logic here (e.g., if stats.spend_ap(2): closest_player.take_damage...)
+		
+	
+	print("Turn executed for enemy: ", name)
+	
+	# End the turn AFTER all logic is complete.
+	CombatManager.end_current_turn()
 
-		print("Turn executed for enemy: ", stats.name)
-		CombatManager.end_current_turn()
 
-func on_combat_started():
-	print(name, " says: 'For the horde!'")
-
-func on_combat_ended():
-	queue_free()
-
-func on_turn_start():
-	if stats:
-		stats.on_turn_start()
-
-	execute_turn()
+# --- Utility Function ---
 
 func is_dead() -> bool:
 	if not stats: return true

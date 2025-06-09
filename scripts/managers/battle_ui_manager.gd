@@ -22,11 +22,13 @@ func _ready():
 func _on_combat_started(turn_queue: Array[Node]):
 	# Make the entire battle UI visible with an animation
 	visible = true
+	print("BattleUIManager: Combat started with turn queue: ", turn_queue)
 	# anim_player.play("show") # Assuming you have a "show" animation
 
 	await turn_order_display.ready
 
 	# Tell the TurnOrderDisplay to populate itself with the combatants
+	print("BattleUIManager: Populating turn order display with combatants.")
 	turn_order_display.populate(turn_queue)
 
 func _on_combat_ended(_result: String):
@@ -40,3 +42,8 @@ func _on_combat_ended(_result: String):
 
 func _on_turn_started(character_node: Node):
 	turn_order_display.update_active_icon(character_node)
+
+
+func _on_end_turn_button_pressed() -> void:
+	print("BattleUI: End Turn button pressed")
+	CombatManager.end_current_turn()

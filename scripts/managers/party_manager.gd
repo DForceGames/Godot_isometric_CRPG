@@ -77,3 +77,13 @@ func get_current_party() -> Array[Node]:
 				members_in_order.append(slot_data["node"])
 	
 	return members_in_order
+
+func make_party_persistent_for_transition():
+	print("PartyManager: Moving active party to root 'life raft' to survive scene change.")
+	var current_party = get_current_party()
+
+	for member in current_party:
+		if member.get_parent():
+			member.get_parent().remove_child(member)
+
+		get_tree().root.call_deferred("add_child", member)
