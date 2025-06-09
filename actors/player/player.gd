@@ -84,7 +84,7 @@ func on_combat_ended():
 func on_combat_manager_turn_started(combatant):
 	if combatant == self:
 		is_my_turn = true
-		stats.on_turn_started()
+		stats.on_turn_started(combatant)
 	else:
 		is_my_turn = false
 		print("Player: Not my turn anymore")
@@ -128,20 +128,20 @@ func _update_player_animations() -> void:
 		return
 		
 	if velocity == Vector2.ZERO:
-		if anim_sprite.animation != "idle":
-			anim_sprite.play("idle")
+		if anim_sprite.animation != "Idle":
+			anim_sprite.play("Idle")
 		return
 			
 	var target_animation = ""
 	if velocity.x < -0.01: # Moving significantly left
-		target_animation = "walking_left"
+		target_animation = "Walking_Left"
 	elif velocity.x > 0.01: # Moving significantly right
-		target_animation = "walking_right"
+		target_animation = "Walking_Right"
 	else: # Moving predominantly vertically
-		if anim_sprite.animation == "walking_left" or anim_sprite.animation == "walking_right":
+		if anim_sprite.animation == "Walking_Left" or anim_sprite.animation == "Walking_Right":
 			target_animation = anim_sprite.animation
 		else:
-			target_animation = "walking_right"
+			target_animation = "Walking_Right"
 	
 	if anim_sprite.animation != target_animation:
 		anim_sprite.play(target_animation)

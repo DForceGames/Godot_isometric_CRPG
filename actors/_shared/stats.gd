@@ -4,7 +4,7 @@ class_name Stats
 
 signal health_changed(current_health, max_health)
 signal ap_changed(current_ap, max_ap)
-signal sp_changed(current_sp, max_sp)
+signal sp_changed(current_sp)
 signal died()
 
 @export var name: String = "Unknown"
@@ -27,7 +27,7 @@ var current_ap:
 		var previous_ap = current_ap
 		current_ap = clamp(value, 0, max_action_points)
 		if current_ap != previous_ap:
-			ap_changed.emit(current_ap, max_action_points)
+			ap_changed.emit(current_ap)
 
 @export var max_step_points: int = 6
 var current_sp: 
@@ -59,8 +59,9 @@ func take_damage(damage_amount: int):
 func is_alive() -> bool:
 	return _current_health > 0
 
-func on_turn_started():
+func on_turn_started(character: Node):
 	# Replenish AP and SP at the start of each turn
+	PartyManager.set_selected_character(character)
 	replenish_ap_to_max()
 	replenish_sp_to_max()
 

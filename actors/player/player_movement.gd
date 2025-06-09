@@ -39,12 +39,20 @@ var path = []
 @export var turn_based_tile_highlight_color: Color = Color(0.2, 0.8, 0.3, 0.5)
 @export var turn_based_path_highlight_color: Color = Color(0.3, 0.6, 0.9, 0.4)
 @export var turn_based_invalid_tile_color: Color = Color(0.9, 0.3, 0.2, 0.5)
+@export var aoe_preview_color: Color = Color(0.8, 0.5, 0.2, 0.6)
+@export var ability_range_color: Color = Color(0.8, 0.5, 0.2, 0.6)
 
 # Visual aids for turn-based mode
 var highlight_tiles: Array[Vector2i] = []
 var current_path_tiles: Array[Vector2i] = []
 var hover_tile: Vector2i = Vector2i(-1, -1)
 var movement_range_indicator: Node2D
+
+var is_in_targeting_mode: bool = false
+var valid_target_tiles: Array[Vector2i] = []
+var aoe_preview_tiles: Array[Vector2i] = []
+var target_ability: AbilityData = null
+var last_hoverd_tile: Vector2i = Vector2i(-1, -1)
 
 func _ready() -> void:
 	await owner.ready
@@ -55,15 +63,6 @@ func _ready() -> void:
 		return
 
 	freeroam_target_position = player.global_position
-
-	# var current_scene = get_tree().current_scene
-
-	# if current_scene:
-	# 	primary_tilemap_layer = current_scene.find_child("Ground", true, false) as TileMapLayer
-	
-	# if not primary_tilemap_layer:
-	# 	printerr("PlayerMovement: PrimaryTileMapLayer not found in scene root. Movement system requires a TileMapLayer.")
-	# 	return
 
 	stats_component = player.stats
 	if not stats_component:
@@ -234,15 +233,6 @@ func follow_path() -> void:
 		# This case should ideally be handled by the path empty check above.
 		player.velocity = Vector2.ZERO
 
-	# Note: player.move_and_slide() should typically be called in _physics_process 
-	# after this function updates player.velocity. For example:
-	#
-	# func _physics_process(delta: float) -> void:
-	#     if current_phase == MovementPhase.FOLLOWING_PATH:
-	#         follow_path()
-	#     if player and player.velocity != Vector2.ZERO:
-	#         player.move_and_slide()
-
 # Snaps a world position to the nearest tile center
 func snap_to_tile(world_position: Vector2) -> Vector2:
 	if not primary_tilemap_layer:
@@ -352,13 +342,27 @@ func set_tiles_solid_from_groups() -> void:
 				continue
 
 # Add this to better separate turn-based and real-time input handling
-func _process(_delta: float) -> void:
-	# Update visuals only in turn-based mode
-	if is_turn_based_mode():
-		_update_turn_based_visuals()
+func _process(_delta: float):
+	if not is_in_targeting_mode and not is_turn_based_mode():
+		return  # Skip processing if not in targeting or turn-based mode
+
+	var current_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+	if current_tile == last_hoverd_tile:
+		return
+
+	last_hoverd_tile = current_tile
+
+	if is_in_targeting_mode:
+		var mouse_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+		_update_targeting_preview(mouse_tile)
+		return
+	elif is_turn_based_mode():
+		_update_turn_based_visuals(current_tile)
+
+	
 
 # Add this function to show the movement range in turn-based mode
-func show_movement_range() -> void:
+func show_movement_range():
 	if not is_turn_based_mode() or not primary_tilemap_layer or not astar_grid:
 		movement_range_indicator.visible = false
 		return
@@ -430,63 +434,88 @@ func _update_turn_based_pathfinding_preview() -> void:
 	
 	movement_range_indicator.queue_redraw()
 
-	# # Check if hover tile is within movement range
-	# if hover_tile in highlight_tiles:
-	# 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-	# 	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
-		
-	# 	var path = astar_grid.get_id_path(player_map_pos, hover_tile)
-		
-	# 	# Limit by SP
-	# 	if path.size() - 1 <= current_sp:
-	# 		current_path_tiles = path
-			
-	# movement_range_indicator.queue_redraw()
-
 # Draw the movement range and path preview
-func _update_turn_based_visuals() -> void:
-	if not movement_range_indicator.visible:
+func _update_turn_based_visuals(mouse_tile_pos: Vector2i):
+	current_path_tiles.clear()
+
+	if not primary_tilemap_layer or not astar_grid:
 		return
-	
-	# Connect to the _draw function if not already connected
-	if not movement_range_indicator.is_connected("draw", Callable(self, "_draw_movement_indicators")):
-		movement_range_indicator.draw.connect(_draw_movement_indicators)
-	
+
+	if mouse_tile_pos in highlight_tiles:
+		var player_tile_pos = primary_tilemap_layer.local_to_map(player.global_position)
+		var new_path = astar_grid.get_id_path(player_tile_pos, mouse_tile_pos)
+		var steps_needed = new_path.size() - 1
+
+		if steps_needed <= stats_component.get_current_sp() and steps_needed > 0:
+			current_path_tiles = new_path
+		
 	movement_range_indicator.queue_redraw()
+	
 
 # Draw function for movement range indicator
-func _draw_movement_indicators() -> void:
-	# Draw all tiles within range
-	for tile_pos in highlight_tiles:
-		var rect_pos = primary_tilemap_layer.map_to_local(tile_pos)
-		rect_pos = primary_tilemap_layer.to_global(rect_pos)
+func _draw_tile_highlight(tile_pos: Vector2i, color: Color):
+	if not primary_tilemap_layer:
+		return
+	
+	var local_tile_center = primary_tilemap_layer.map_to_local(tile_pos)
+
+	var half_size = cell_size / 2.0
+	var points = PackedVector2Array([
+		local_tile_center + Vector2(0, -half_size.y),          # Top
+		local_tile_center + Vector2(half_size.x, 0),           # Right
+		local_tile_center + Vector2(0, half_size.y),           # Bottom
+		local_tile_center + Vector2(-half_size.x, 0)           # Left
+	])
+
+	draw_colored_polygon(points, color)
+
+func _draw_movement_indicators():
+	if is_in_targeting_mode:
+		for tile in valid_target_tiles:
+			_draw_tile_highlight(tile, ability_range_color)
+
+		for tile in aoe_preview_tiles:
+			_draw_tile_highlight(tile, aoe_preview_color)
+
+	elif is_turn_based_mode():
+		# Draw all tiles within range
+		for tile in highlight_tiles:
+			_draw_tile_highlight(tile, turn_based_tile_highlight_color)
 		
-		# Convert to movement_range_indicator's local coordinates
-		rect_pos = movement_range_indicator.to_local(rect_pos)
+		for tile in current_path_tiles:
+			_draw_tile_highlight(tile, turn_based_path_highlight_color)
+	
+	# # Draw all tiles within range
+	# for tile_pos in highlight_tiles:
+	# 	var rect_pos = primary_tilemap_layer.map_to_local(tile_pos)
+	# 	rect_pos = primary_tilemap_layer.to_global(rect_pos)
 		
-		# Draw highlight
-		var tile_size = get_tile_size()
-		var half_size = Vector2(tile_size/2, tile_size/4)  # Adjusted for isometric
+	# 	# Convert to movement_range_indicator's local coordinates
+	# 	rect_pos = movement_range_indicator.to_local(rect_pos)
 		
-		# Draw different shapes based on whether it's in the current path
-		if tile_pos in current_path_tiles:
-			# Draw path tile
-			var points = [
-				rect_pos + Vector2(0, -half_size.y),          # Top
-				rect_pos + Vector2(half_size.x, 0),           # Right
-				rect_pos + Vector2(0, half_size.y),           # Bottom
-				rect_pos + Vector2(-half_size.x, 0)           # Left
-			]
-			movement_range_indicator.draw_colored_polygon(points, turn_based_path_highlight_color)
-		else:
-			# Draw range tile
-			var points = [
-				rect_pos + Vector2(0, -half_size.y),          # Top
-				rect_pos + Vector2(half_size.x, 0),           # Right
-				rect_pos + Vector2(0, half_size.y),           # Bottom
-				rect_pos + Vector2(-half_size.x, 0)           # Left
-			]
-			movement_range_indicator.draw_colored_polygon(points, turn_based_tile_highlight_color)
+	# 	# Draw highlight
+	# 	var tile_size = get_tile_size()
+	# 	var half_size = Vector2(tile_size/2, tile_size/4)  # Adjusted for isometric
+		
+	# 	# Draw different shapes based on whether it's in the current path
+	# 	if tile_pos in current_path_tiles:
+	# 		# Draw path tile
+	# 		var points = [
+	# 			rect_pos + Vector2(0, -half_size.y),          # Top
+	# 			rect_pos + Vector2(half_size.x, 0),           # Right
+	# 			rect_pos + Vector2(0, half_size.y),           # Bottom
+	# 			rect_pos + Vector2(-half_size.x, 0)           # Left
+	# 		]
+	# 		movement_range_indicator.draw_colored_polygon(points, turn_based_path_highlight_color)
+	# 	else:
+	# 		# Draw range tile
+	# 		var points = [
+	# 			rect_pos + Vector2(0, -half_size.y),          # Top
+	# 			rect_pos + Vector2(half_size.x, 0),           # Right
+	# 			rect_pos + Vector2(0, half_size.y),           # Bottom
+	# 			rect_pos + Vector2(-half_size.x, 0)           # Left
+	# 		]
+	# 		movement_range_indicator.draw_colored_polygon(points, turn_based_tile_highlight_color)
 
 # Override the existing handle_game_mode_changed function
 func _handle_game_mode_changed(new_mode):
@@ -561,101 +590,6 @@ func _physics_process(_delta: float):
 		else:
 			var direction = player.global_position.direction_to(freeroam_target_position)
 			player.velocity = direction * speed
-
-# # Update existing _handle_turn_based_input to use our new visuals
-# func _handle_turn_based_input(event: InputEvent) -> void:
-# 	if not stats_component:
-# 		print("PlayerMovement: No Stats component found. Cannot handle input.")
-# 		return
-# 	# Get world coordinates for mouse click and player position
-# 	var mouse_pos = player.get_global_mouse_position()
-# 	var local_mouse_pos = primary_tilemap_layer.to_local(mouse_pos)
-# 	var clicked_cell = primary_tilemap_layer.local_to_map(local_mouse_pos)
-
-# 	# First check if the clicked cell is within the movement range
-# 	if not clicked_cell in highlight_tiles:
-# 		print("PlayerMovement: Clicked outside movement range")
-# 		return
-		
-# 	var player_local_pos_for_map = primary_tilemap_layer.to_local(player.global_position)
-# 	var current_map_coords = primary_tilemap_layer.local_to_map(player_local_pos_for_map)
-
-# 	# Calculate path to the target cell
-# 	var new_path = astar_grid.get_id_path(current_map_coords, clicked_cell)
-
-# 	if new_path.size() <= 1: # No path or path is just the current tile
-# 		print("PlayerMovement: No valid path found or target is current location.")
-# 		_reset_path()
-# 		return
-
-# 	# Check if we have enough SP for the path
-# 	var steps_needed = new_path.size() - 1
-# 	if steps_needed > stats_component.get_current_sp():
-# 		print("PlayerMovement: Not enough SP to take this path")
-# 		return
-
-# 	if stats_component.spend_sp(steps_needed):
-# 		print("PlayerMovement: SP spent successfully for path")
-# 		path.clear()
-# 		for cell_id in new_path:
-# 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
-
-# 		if movement_range_indicator: movement_range_indicator.queue_redraw()
-# 		_start_following_path()
-# 	else:
-# 		print("PlayerMovement: Failed to spend SP for path")
-# 		return
-
-# Handle turn-based movement with proper SP cost handling
-# func handle_turn_based_movement(target_position: Vector2) -> void:
-# 	if not is_turn_based_mode() or not stats_component or not primary_tilemap_layer:
-# 		# Fall back to real-time pathfinding if not in turn-based mode
-# 		start = player.global_position
-# 		end = target_position
-# 		get_ideal_path()
-# 		return
-	
-# 	# Get target cell coordinates
-# 	var local_target_pos = primary_tilemap_layer.to_local(target_position)
-# 	var target_cell = primary_tilemap_layer.local_to_map(local_target_pos)
-	
-# 	# Only process clicks within movement range
-# 	if not target_cell in highlight_tiles:
-# 		print("PlayerMovement: Clicked outside movement range")
-# 		return
-	
-# 	# Get player's current cell
-# 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-# 	var player_cell = primary_tilemap_layer.local_to_map(player_local_pos)
-	
-# 	# Calculate path to the target cell
-# 	var new_path = astar_grid.get_id_path(player_cell, target_cell)
-	
-# 	if new_path.size() <= 1: # No path or path is just the current tile
-# 		print("PlayerMovement: No valid path found or target is current location.")
-# 		_reset_path()
-# 		return
-	
-# 	# Check if we have enough SP for the path
-# 	var steps_needed = new_path.size() - 1
-# 	if steps_needed > stats_component.get_current_sp():
-# 		print("PlayerMovement: Not enough SP to take this path")
-# 		return
-	
-# 	# Spend SP and setup path
-# 	if stats_component.spend_sp(steps_needed):
-# 		print("PlayerMovement: SP spent successfully for path of %d steps" % steps_needed)
-# 		path.clear()
-		
-# 		# Convert path to world coordinates
-# 		for cell_id in new_path:
-# 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
-		
-# 		if movement_range_indicator: movement_range_indicator.queue_redraw()
-# 		_start_following_path()
-# 	else:
-# 		print("PlayerMovement: Failed to spend SP for path")
-# 		return
 
 # Handler for sp_changed signal
 func _on_sp_changed(_new_sp: int, _max_sp: int) -> void:
@@ -771,3 +705,80 @@ func toggle_debug_view() -> void:
 		debug_view_enabled = true
 	draw_debug_markers(debug_view_enabled)
 	print("Debug view ", "enabled" if debug_view_enabled else "disabled")
+
+# Function for targeting mode for abilities
+func enter_targeting_mode(ability: AbilityData):
+	if not is_turn_based_mode():
+		print("PlayerMovement: Cannot enter targeting mode in real-time mode.")
+		return
+	
+	if not ability:
+		print("PlayerMovement: No ability provided for targeting mode.")
+		return
+	
+	if is_in_targeting_mode:
+		print("PlayerMovement: Already in targeting mode.")
+		stop_targeting_mode()
+
+	is_in_targeting_mode = true
+	target_ability = ability
+	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
+	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+	valid_target_tiles = get_valid_target_tiles(player_map_pos, ability)
+
+	movement_range_indicator.queue_redraw()
+
+func get_valid_target_tiles(start_tile: Vector2i, ability) -> Array[Vector2i]:
+	var valid_tiles: Array[Vector2i] = []
+	# calculate valid tile based on the player position and minimum and maximum ability range
+	if not primary_tilemap_layer or not astar_grid:
+		print("PlayerMovement: No primary_tilemap_layer or astar_grid found. Cannot get valid target tiles.")
+		return valid_tiles
+
+	var max_range = ability.max_range if ability else 0
+	var min_range = ability.min_range if ability else 0
+	for tile in astar_grid.get_tiles_in_range(start_tile, max_range):
+		if tile.distance_to(start_tile) >= min_range:
+			valid_tiles.append(tile)
+
+	print("PlayerMovement: Valid target tiles calculated for ability ", ability.ability_name, ": ", valid_tiles)
+	return valid_tiles
+
+func stop_targeting_mode():
+	is_in_targeting_mode = false
+	target_ability = null
+	valid_target_tiles.clear()
+	aoe_preview_tiles.clear()
+	movement_range_indicator.queue_redraw()
+
+func _update_targeting_preview(mouse_tile_pos: Vector2i):
+	aoe_preview_tiles.clear()
+
+	if mouse_tile_pos in valid_target_tiles:
+		aoe_preview_tiles = get_aoe_tiles(mouse_tile_pos, target_ability)
+
+	movement_range_indicator.queue_redraw()
+
+func get_aoe_tiles(center_tile: Vector2i, ability: AbilityData) -> Array[Vector2i]:
+	var affected_tiles: Array[Vector2i] = []
+	match ability.aoe_shape:
+		"circle":
+			var radius = ability.aoe_radius if ability else 1
+			for x in range(-radius, radius + 1):
+				for y in range(-radius, radius + 1):
+					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
+					if tile.distance_to(center_tile) <= radius and astar_grid.region.has_point(tile):
+						affected_tiles.append(tile)
+		"square":
+			var size = ability.aoe_size if ability else 1
+			for x in range(-size, size + 1):
+				for y in range(-size, size + 1):
+					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
+					if astar_grid.region.has_point(tile):
+						affected_tiles.append(tile)
+		"none":
+			# No AoE, just return the center tile
+			if astar_grid.region.has_point(center_tile):
+				affected_tiles.append(center_tile)
+
+	return affected_tiles

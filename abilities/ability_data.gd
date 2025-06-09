@@ -10,7 +10,8 @@ class_name AbilityData
 @export_group("Gameplay Mechanics")
 @export var ap_cost: int = 1
 @export var cooldown_time: float = 0.0 # Cooldown in turns
-@export var ability_range: int = 1 # Range of ability in tiles
+@export var max_range: int = 1 # Range of ability in tiles
+@export var min_range: int = 0 # Minimum range, e.g., for melee abilities
 @export var ability_power: float = 0 # Base power of the ability, e.g., damage or healing amount
 @export var area_of_effect_radius: int = 0 # For abilities that affect an area
 # Add more common properties:

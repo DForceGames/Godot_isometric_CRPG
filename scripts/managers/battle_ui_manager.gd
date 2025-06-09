@@ -1,6 +1,5 @@
 extends CanvasLayer
 
-@onready var action_bar = $ActionBar
 @onready var turn_order_display = $TurnOrder
 
 @onready var anim_player = $AnimationPlayer

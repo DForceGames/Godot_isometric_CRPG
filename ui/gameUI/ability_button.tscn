@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://bfmajx30qnpn"]
+
+[ext_resource type="Texture2D" uid="uid://3k8a8c66hreb" path="res://art_source/ui/icons/fighter/Barbarian_1.png" id="1_un82t"]
+[ext_resource type="Script" uid="uid://sglny8dovy7" path="res://ui/gameUI/ability_button.gd" id="1_wd8fa"]
+
+[node name="AbilityButton" type="Button"]
+custom_minimum_size = Vector2(40, 40)
+offset_right = 520.0
+offset_bottom = 520.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+icon = ExtResource("1_un82t")
+icon_alignment = 1
+expand_icon = true
+script = ExtResource("1_wd8fa")

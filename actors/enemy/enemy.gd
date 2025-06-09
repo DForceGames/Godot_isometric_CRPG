@@ -26,15 +26,15 @@ func _ready():
 
 # --- Signal Handlers ---
 
-func _on_turn_started(combatant_whose_turn_it_is: Node):
+func _on_turn_started(combatant: Node):
 	# This function runs every time ANYONE's turn starts.
 	# We check if the turn is for this specific instance.
-	if combatant_whose_turn_it_is == self:
+	if combatant == self:
 		print("Enemy '", name, "': My turn has begun!")
 		
 		# Replenish stats and then execute the AI logic
 		if stats:
-			stats.on_turn_started()
+			stats.on_turn_started(combatant)
 		execute_turn()
 
 func _on_combat_ended(_result: String):

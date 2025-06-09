@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://blfd1agja6qem" path="res://scripts/change_to_battle.gd" id="6_egu6l"]
 [ext_resource type="PackedScene" uid="uid://cje1icwhrle3f" path="res://items/containers/bomb.tscn" id="7_y0ld0"]
 [ext_resource type="PackedScene" uid="uid://ctdtp8kbpjoox" path="res://actors/npc/friendly_npc/Harold.tscn" id="8_166p4"]
-[ext_resource type="PackedScene" uid="uid://bx5mhjvmagywx" path="res://ui/standard_ui.tscn" id="9_8de6f"]
+[ext_resource type="PackedScene" uid="uid://bx5mhjvmagywx" path="res://ui/main_hud.tscn" id="9_8de6f"]
 [ext_resource type="PackedScene" uid="uid://ih5nrtcmmq0u" path="res://items/containers/chest.tscn" id="10_e0egg"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_egu6l"]
