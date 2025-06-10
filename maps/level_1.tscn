@@ -75,7 +75,6 @@ script = ExtResource("5_yrkou")
 metadata/_edit_use_anchors_ = true
 
 [node name="StandardUi" parent="Camera2D" instance=ExtResource("9_8de6f")]
-position = Vector2(516, 176)
 
 [node name="grassland" type="Area2D" parent="."]
 position = Vector2(-132, 5)

@@ -36,7 +36,7 @@ var current_sp:
 		var previous_sp = current_sp
 		current_sp = clamp(value, 0, max_step_points)
 		if current_sp != previous_sp:
-			sp_changed.emit(current_sp, max_step_points)
+			sp_changed.emit(current_sp)
 
 @export var attack_power: int = 10
 @export var defense: int = 5

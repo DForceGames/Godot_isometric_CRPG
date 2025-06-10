@@ -32,9 +32,9 @@ theme_override_constants/margin_left = 5
 theme_override_constants/margin_top = 5
 theme_override_constants/margin_right = 5
 
-[node name="PartyMembers" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer"]
+[node name="CharacterContainer" type="VBoxContainer" parent="MarginContainer/PanelContainer/MarginContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CharacterIcon" parent="MarginContainer/PanelContainer/MarginContainer/PartyMembers" instance=ExtResource("2_uat8m")]
+[node name="CharacterDisplayContainer" parent="MarginContainer/PanelContainer/MarginContainer/CharacterContainer" instance=ExtResource("2_uat8m")]
 layout_mode = 2

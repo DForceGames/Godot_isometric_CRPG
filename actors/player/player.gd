@@ -44,7 +44,7 @@ func _ready() -> void:
 	stats.initialize_stats()
 	stats.health_changed.connect(_on_health_changed)
 	stats.ap_changed.connect(_on_ap_changed)
-	stats.sp_changed.connect(_on_sp_changed)
+	# stats.sp_changed.connect(_on_sp_changed)
 	stats.died.connect(_on_died)
 
 func _input(event: InputEvent) -> void:
@@ -52,30 +52,17 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
+		if movement_system.is_in_targeting_mode:
+			movement_system.stop_targeting_mode()
+			return
 		var target_pos = get_global_mouse_position()
 		movement_system.set_movement_target(target_pos)
 		print("Player: Right-clicked to move to position ", target_pos)
 	
-	# if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
-	# 	return
-		
-	# var interactable = get_interactable_at_mouse_position()
-	# if interactable:
-	# 	if is_within_interaction_distance(interactable):
-	# 		interactable.interact()
-	# 		if interactable is NPC:
-	# 			current_nearby_npc = interactable
-	# 	else:
-	# 		# Move closer to interactable
-	# 		var pos_to_move = position_one_tile_away_from(interactable)
-	# 		move_to_position(pos_to_move)
-	# else:
-	# 	# Move to clicked position
-	# 	move_to_position(get_global_mouse_position())
 
 # Combat handlers -------------------------------------------------------------
 
-func on_combat_started():
+func on_combat_started(_turn_queue):
 	is_my_turn = false
 
 func on_combat_ended():
@@ -95,8 +82,8 @@ func _on_health_changed(current_health, max_health):
 func _on_ap_changed(current_ap, max_ap):
 	emit_signal("ap_changed", current_ap, max_ap)
 
-func _on_sp_changed(current_sp: int):
-	emit_signal("_on_sp_changed", current_sp)
+# func _on_sp_changed(current_sp):
+# 	emit_signal("sp_changed", current_sp)
 
 func _on_died():
 	$AnimatedSprite2D.play("Death")

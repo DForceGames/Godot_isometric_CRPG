@@ -583,8 +583,8 @@ func _update_turn_based_visuals() -> void:
 		return
 	
 	# Connect to the _draw function if not already connected
-	if not movement_range_indicator.is_connected(\"draw\", Callable(self, \"_draw_movement_indicators\")):
-		movement_range_indicator.draw.connect(_draw_movement_indicators)
+	if not movement_range_indicator.is_connected(\"draw\", Callable(self, \"_draw\")):
+		movement_range_indicator.draw.connect(_draw)
 	
 	movement_range_indicator.queue_redraw()
 

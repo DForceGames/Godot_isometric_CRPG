@@ -13,11 +13,18 @@ class_name AbilityData
 @export var max_range: int = 1 # Range of ability in tiles
 @export var min_range: int = 0 # Minimum range, e.g., for melee abilities
 @export var ability_power: float = 0 # Base power of the ability, e.g., damage or healing amount
+
+enum AoeShape {
+	NONE,
+	CIRCLE,
+	SQUARE,
+	VLINE,
+	HLINE,
+	DIAGONAL
+}
+@export var aoe_shape: AoeShape = AoeShape.NONE # Area of effect shape 
 @export var area_of_effect_radius: int = 0 # For abilities that affect an area
-# Add more common properties:
-#@export var damage_type: Enum.DamageType # you'd define this enum
-#@export var target_type: Enum.TargetType # Ensure TargetType is defined within your Enum scope (e.g., an Enum script or class)
-# @export var effects_to_apply: Array[StatusEffectData] # Another custom resource
+
 
 @export_group("Visuals & Audio")
 @export var animation_name: StringName # Animation to play on the caster
