@@ -3,7 +3,7 @@ extends Resource
 class_name Stats
 
 signal health_changed(current_health, max_health)
-signal ap_changed(current_ap, max_ap)
+signal ap_changed(current_ap)
 signal sp_changed(current_sp)
 signal died()
 
@@ -21,7 +21,7 @@ var _current_health: int:
 				died.emit()
 
 @export var max_action_points: int = 6
-var current_ap: 
+var current_ap: int: 
 	get: return current_ap
 	set(value):
 		var previous_ap = current_ap
@@ -54,7 +54,7 @@ func take_damage(damage_amount: int):
 	var effective_damage = damage_amount
 	if effective_damage < 0:
 		effective_damage = 1
-	self.current_health -= effective_damage
+	self._current_health -= effective_damage
 	print("Damage taken: ", effective_damage, " | Current Health: ", _current_health)
 	if _current_health <= 0:
 		print(name, " has died.")
@@ -76,6 +76,7 @@ func get_current_ap() -> int:
 func spend_ap(amount: int) -> bool:
 	if current_ap >= amount:
 		self.current_ap -= amount
+		emit_signal("ap_changed", current_ap)
 		return true
 	return false
 

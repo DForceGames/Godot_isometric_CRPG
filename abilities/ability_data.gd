@@ -6,6 +6,8 @@ class_name AbilityData
 @export var ability_name: String
 @export_multiline var description: String
 @export var icon: Texture2D
+@export var damage_type: String # e.g., "physical", "magical", "healing"
+@export var damage_multiplier: float = 1.0 # Multiplier for damage or healing effects
 
 @export_group("Gameplay Mechanics")
 @export var ap_cost: int = 1
@@ -30,7 +32,7 @@ enum AoeShape {
 	HLINE,
 	DIAGONAL
 }
-@export var aoe_shape: AoeShape = AoeShape.NONE # Area of effect shape 
+@export var aoe_shape: AoeShape # Area of effect shape 
 @export var area_of_effect_radius: int = 0 # For abilities that affect an area
 
 @export var effects: Array[AbilityEffect] = []
@@ -43,10 +45,21 @@ enum AoeShape {
 @export var impact_sound: AudioStream
 
 func use_ability(user, center_tile):
+	if user.stats.current_ap < ap_cost:
+		print("Not enough AP to use ability: " + ability_name)
+		return
 	print("Using ability: "+ ability_name)
-	var movement_system = user.get_node("PlayerMovement")
-	var affected_tiles = movement_system.get_aoe_tiles(center_tile, self)
+	var affected_tiles = CombatManager.get_aoe_tiles(center_tile, self)
+	var damage = calc_damage(user)
 
 	for effect in effects:
 		if effect:
-			effect.execute(user, center_tile, affected_tiles)
+			effect.execute(user, center_tile, affected_tiles, damage)
+
+
+	# Spend AP
+	user.stats.current_ap -= ap_cost
+
+func calc_damage(user):
+	var base_damage = user.stats.attack_power * damage_multiplier
+	return base_damage

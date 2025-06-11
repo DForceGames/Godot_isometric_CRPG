@@ -18,6 +18,13 @@ func _ready():
 		print("AbilityBar: Initial character found: ", initial_character)
 		populate_for_character(initial_character)
 
+	# Connect stats change signal to update AP display
+	UiManager.stats_changed.connect(update_ability_bar)
+
+func update_ability_bar():
+	print("AbilityBar: Updating ability bar for selected character.")
+	populate_ap_for_character()
+	populate_for_character(PartyManager.get_selected_character())
 
 func populate_for_character(character_node: Node):
 	# print("AbilityBar: Populating for character: ", character_node)
@@ -47,3 +54,15 @@ func populate_for_character(character_node: Node):
 			print("AbilityBar: No ability for button index ", i)
 			button.set_empty()
 	
+func populate_ap_for_character():
+	var initial_character = PartyManager.get_selected_character()
+	# This function can be used to update AP display if needed
+	if not is_instance_valid(initial_character) or not initial_character.stats:
+		print("AbilityBar: Invalid character node or stats not found for AP update.")
+		return
+	
+	var current_ap = initial_character.stats.current_ap
+	var max_ap = initial_character.stats.max_action_points
+	print("AbilityBar: Current AP for character: ", current_ap)
+	print("AbilityBar: Max AP for character: ", max_ap)
+	%CurrentAP.text = "%s/%s" % [current_ap, max_ap]

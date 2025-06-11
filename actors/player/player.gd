@@ -28,8 +28,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# Get GameStateManager
 	game_state_manager = get_node_or_null("/root/GameStateManager")
-	if game_state_manager:
-		game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
+	# if game_state_manager:
+	# 	game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
 
 	combat_manager = get_node_or_null("/root/CombatManager")
 	if combat_manager:
@@ -42,8 +42,7 @@ func _ready() -> void:
 		printerr("Player: No stats resource assigned!")
 		return
 	stats.initialize_stats()
-	stats.health_changed.connect(_on_health_changed)
-	stats.ap_changed.connect(_on_ap_changed)
+
 	# stats.sp_changed.connect(_on_sp_changed)
 	stats.died.connect(_on_died)
 
@@ -52,7 +51,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
-		if movement_system.is_in_targeting_mode:
+		if combat_manager.is_in_targeting_mode:
 			movement_system.stop_targeting_mode()
 			return
 		var target_pos = get_global_mouse_position()
@@ -75,12 +74,6 @@ func on_combat_manager_turn_started(combatant):
 	else:
 		is_my_turn = false
 		print("Player: Not my turn anymore")
-
-func _on_health_changed(current_health, max_health):
-	emit_signal("health_changed", current_health, max_health)
-
-func _on_ap_changed(current_ap, max_ap):
-	emit_signal("ap_changed", current_ap, max_ap)
 
 func _on_died():
 	$AnimatedSprite2D.play("Death")
@@ -184,4 +177,3 @@ func end_npc_interaction() -> void:
 	if current_nearby_npc and current_nearby_npc.has_method("end_interaction"):
 		current_nearby_npc.end_interaction()
 		current_nearby_npc = null
-

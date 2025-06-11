@@ -82,7 +82,8 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "AP:"
 
-[node name="Label" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+[node name="CurrentAP" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "6"
 horizontal_alignment = 1

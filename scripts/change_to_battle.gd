@@ -30,6 +30,7 @@ func _on_body_entered(body: Node2D):
 
 	var game_state_manager = get_node_or_null("/root/GameStateManager")
 	if game_state_manager:
+		print("|-----------Change Scene to Battle-----------|")
 		print("ChangeToBattle: Preparing for battle with data: ", battle_data)
 		game_state_manager.prepare_for_battle(battle_data)
 	
