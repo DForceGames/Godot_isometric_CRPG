@@ -238,14 +238,6 @@ frame_progress = 0.0699528
 [node name="PlayerMovement" type="Node2D" parent="."]
 position = Vector2(0, 11)
 script = ExtResource("4_0uenp")
-cell_size = null
-speed = null
-y_offset = null
-turn_based_tile_highlight_color = null
-turn_based_path_highlight_color = null
-turn_based_invalid_tile_color = null
-aoe_preview_color = null
-ability_range_color = null
 
 [node name="WorldPlace" type="CollisionPolygon2D" parent="."]
 position = Vector2(0, 11)

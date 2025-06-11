@@ -86,6 +86,14 @@ func _ready() -> void:
 	if not is_connected("sp_changed", Callable(self, "_on_sp_changed")):
 		connect("sp_changed", Callable(self, "_on_sp_changed"))
 
+	# Add timer for hover updates
+	var hover_timer = Timer.new()
+	hover_timer.name = "_hover_timer"
+	hover_timer.one_shot = true
+	hover_timer.wait_time = 0.05
+	hover_timer.connect("timeout", Callable(self, "_update_hover_preview"))
+	add_child(hover_timer)
+
 func _process(_delta: float):
 	if not is_in_targeting_mode and not is_turn_based_mode():
 		return  # Skip processing if not in targeting or turn-based mode
@@ -338,25 +346,12 @@ func _input(event: InputEvent) -> void:
 		
 	# Track mouse hover in turn-based mode for tile highlighting
 	if event is InputEventMouseMotion:
-		var mouse_pos = get_viewport().get_mouse_position()
-		var local_mouse_pos = primary_tilemap_layer.to_local(primary_tilemap_layer.get_canvas_transform().affine_inverse() * mouse_pos)
-		var new_hover_tile = primary_tilemap_layer.local_to_map(local_mouse_pos)
-		
+		var new_hover_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+
 		if new_hover_tile != hover_tile:
 			hover_tile = new_hover_tile
-			# Add a small delay before updating the pathfinding preview
-			if has_node("_hover_timer"):
-				get_node("_hover_timer").start()
-			else:
-				var timer = Timer.new()
-				timer.name = "_hover_timer"
-				timer.one_shot = true
-				timer.wait_time = 0.05
-				timer.connect("timeout", Callable(self, "_update_turn_based_pathfinding_preview"))
-				add_child(timer)
-				timer.start()
+			get_node("_hover_timer").start()
 	
-
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 		if is_in_targeting_mode:
 			var clicked_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
@@ -426,25 +421,32 @@ func get_tiles_in_range(start_pos: Vector2i, range_value: int) -> Array[Vector2i
 	
 	return tiles_in_range
 
-func _update_turn_based_pathfinding_preview() -> void:
-	if not is_turn_based_mode() or not primary_tilemap_layer or not astar_grid:
-		return
+# func _update_turn_based_pathfinding_preview() -> void:
+# 	if not is_turn_based_mode() or not primary_tilemap_layer or not astar_grid:
+# 		return
 		
-	current_path_tiles.clear()
+# 	current_path_tiles.clear()
 	
-	if highlight_tiles.has(hover_tile):
-		var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-		var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
-		var path_ids = astar_grid.get_id_path(player_map_pos, hover_tile)
-		var new_path = [] # This will be the path for display
-		if path_ids.size() > 1:
-			new_path = path_ids.slice(1) # Exclude the starting tile
-		var steps_needed = new_path.size() - 1
+# 	if highlight_tiles.has(hover_tile):
+# 		var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
+# 		var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+# 		var path_ids = astar_grid.get_id_path(player_map_pos, hover_tile)
+# 		var new_path = [] # This will be the path for display
+# 		if path_ids.size() > 1:
+# 			new_path = path_ids.slice(1) # Exclude the starting tile
+# 		var steps_needed = new_path.size() - 1
 
-		if steps_needed - 1 <= stats_component.get_current_sp() and path_ids.size() > 0:
-			current_path_tiles = new_path
+# 		if steps_needed - 1 <= stats_component.get_current_sp() and path_ids.size() > 0:
+# 			current_path_tiles = new_path
 	
-	queue_redraw()
+# 	queue_redraw()
+func _update_hover_preview():
+	var mouse_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+
+	if is_in_targeting_mode:
+		_update_targeting_preview(mouse_tile)
+	elif is_turn_based_mode():
+		_update_turn_based_visuals(mouse_tile)
 
 func _update_turn_based_visuals(mouse_tile_pos: Vector2i):
 	current_path_tiles.clear()
@@ -580,7 +582,7 @@ func _on_sp_changed(_new_sp):
 	if is_turn_based_mode():
 		print("PlayerMovement: Detected SP change from Stats. New SP: %s. Updating movement range." % _new_sp)
 		show_movement_range() 
-		_update_turn_based_pathfinding_preview() 
+		# _update_turn_based_pathfinding_preview() 
 		if movement_range_indicator: queue_redraw()
 
 # Ensure _on_step_taken exists if connected in _ready
@@ -702,6 +704,7 @@ func enter_targeting_mode(ability: AbilityData):
 		print("PlayerMovement: Already in targeting mode.")
 		stop_targeting_mode()
 
+	get_node("_hover_timer").stop()
 	is_in_targeting_mode = true
 	target_ability = ability
 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
@@ -727,6 +730,7 @@ func get_valid_target_tiles(start_tile: Vector2i, ability) -> Array[Vector2i]:
 	return valid_tiles
 
 func stop_targeting_mode():
+	get_node("_hover_timer").stop()
 	is_in_targeting_mode = false
 	target_ability = null
 	valid_target_tiles.clear()
