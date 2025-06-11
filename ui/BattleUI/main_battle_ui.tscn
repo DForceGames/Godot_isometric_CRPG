@@ -1,14 +1,29 @@
-[gd_scene load_steps=4 format=3 uid="uid://bvdwp03s1ifpc"]
+[gd_scene load_steps=5 format=3 uid="uid://bvdwp03s1ifpc"]
 
-[ext_resource type="Script" uid="uid://dogvobfv6elij" path="res://ui/BattleUI/battle_ui.gd" id="1_tl42q"]
+[ext_resource type="Script" uid="uid://dtov5h1iuwywp" path="res://scripts/managers/battle_ui_manager.gd" id="1_2ae3i"]
 [ext_resource type="PackedScene" uid="uid://vjd6n1qggdvg" path="res://ui/BattleUI/turn_order.tscn" id="2_be03e"]
 [ext_resource type="PackedScene" uid="uid://cobhbmqel8qip" path="res://ui/gameUI/party_members.tscn" id="3_2ae3i"]
+[ext_resource type="PackedScene" uid="uid://clbimt2ojlm11" path="res://ui/gameUI/ability_bar.tscn" id="4_ou8ks"]
 
 [node name="MainBattleUi" type="CanvasLayer"]
-script = ExtResource("1_tl42q")
+script = ExtResource("1_2ae3i")
 
 [node name="TurnOrder" parent="." instance=ExtResource("2_be03e")]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="PartyMembers" parent="." instance=ExtResource("3_2ae3i")]
+
+[node name="EndTurnButton" type="Button" parent="."]
+offset_left = 1021.0
+offset_top = 619.0
+offset_right = 1178.0
+offset_bottom = 699.0
+size_flags_horizontal = 8
+size_flags_vertical = 4
+text = "End turn"
+metadata/_edit_use_anchors_ = true
+
+[node name="AbilityBar" parent="." instance=ExtResource("4_ou8ks")]
+
+[connection signal="pressed" from="EndTurnButton" to="." method="_on_end_turn_button_pressed"]

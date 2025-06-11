@@ -93,7 +93,7 @@ func _process_idle_state(delta: float) -> void:
 			target_position = patrol_points[current_patrol_index]
 			set_state(NpcState.WALKING)
 
-func _process_walking_state(delta: float) -> void:
+func _process_walking_state(_delta: float) -> void:
 	if global_position.distance_to(target_position) < 5.0:
 		# Reached target position, go back to idle
 		set_state(NpcState.IDLE)
@@ -250,7 +250,7 @@ func get_dialogue() -> Dictionary:
 		"options": []
 	}
 
-func _on_game_mode_changed(new_mode) -> void:
+func _on_game_mode_changed(_new_mode) -> void:
 	# React to game mode changes (real-time vs turn-based)
 	if game_state_manager.is_turn_based():
 		# Stop movement in turn-based mode

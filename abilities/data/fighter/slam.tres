@@ -1,7 +1,13 @@
-[gd_resource type="Resource" script_class="AbilityData" load_steps=3 format=3 uid="uid://wxgcmdslftc6"]
+[gd_resource type="Resource" script_class="AbilityData" load_steps=6 format=3 uid="uid://wxgcmdslftc6"]
 
+[ext_resource type="Script" uid="uid://bs2qabo8ek7qs" path="res://abilities/ability_effect.gd" id="1_2qlbx"]
 [ext_resource type="Texture2D" uid="uid://c2010iorfv3xd" path="res://art_source/ui/icons/fighter/Barbarian_20.png" id="1_8aufi"]
 [ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="1_l8n0l"]
+[ext_resource type="Script" uid="uid://y0hhue8moiw5" path="res://abilities/effects/damage_effect.gd" id="2_4s1pg"]
+
+[sub_resource type="Resource" id="Resource_yr1ev"]
+script = ExtResource("2_4s1pg")
+metadata/_custom_type_script = "uid://y0hhue8moiw5"
 
 [resource]
 script = ExtResource("1_l8n0l")
@@ -9,11 +15,16 @@ ability_id = &"1"
 ability_name = "Slam"
 description = "Slam the ground in from of you, doing extra damage."
 icon = ExtResource("1_8aufi")
+damage_type = ""
+damage_multiplier = 1.0
 ap_cost = 4
 cooldown_time = 2.0
-ability_range = 1
+max_range = 1
+min_range = 0
 ability_power = 2.25
+target_type = 1
+aoe_shape = 2
 area_of_effect_radius = 0
+effects = Array[ExtResource("1_2qlbx")]([SubResource("Resource_yr1ev")])
 animation_name = &""
-target_type = 0
 metadata/_custom_type_script = "uid://br2yqbte6ghj6"

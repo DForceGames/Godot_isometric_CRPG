@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=2 format=3 uid="uid://3xxh7a08wpno"]
+
+[ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="1_i054y"]
+
+[resource]
+script = ExtResource("1_i054y")
+ability_id = &"BasicAttack"
+ability_name = "Basic attack"
+description = "A basic attack"
+ap_cost = 3
+cooldown_time = 0.0
+ability_range = 1
+ability_power = 0.8
+area_of_effect_radius = 0
+animation_name = &""
+target_type = 0
+metadata/_custom_type_script = "uid://br2yqbte6ghj6"

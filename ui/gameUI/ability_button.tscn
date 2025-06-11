@@ -1,0 +1,41 @@
+[gd_scene load_steps=5 format=3 uid="uid://bfmajx30qnpn"]
+
+[ext_resource type="Texture2D" uid="uid://3k8a8c66hreb" path="res://art_source/ui/icons/fighter/Barbarian_1.png" id="1_un82t"]
+[ext_resource type="Script" uid="uid://sglny8dovy7" path="res://ui/gameUI/ability_button.gd" id="1_wd8fa"]
+[ext_resource type="FontFile" uid="uid://dx7jdme5cmjea" path="res://art_source/Font/m5x7.ttf" id="3_jdkg3"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_un82t"]
+font = ExtResource("3_jdkg3")
+font_size = 24
+
+[node name="AbilityButton" type="Button"]
+custom_minimum_size = Vector2(40, 40)
+offset_right = 520.0
+offset_bottom = 520.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+icon = ExtResource("1_un82t")
+icon_alignment = 1
+expand_icon = true
+script = ExtResource("1_wd8fa")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+
+[node name="AbilityCost" type="Label" parent="MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+text = "0"
+label_settings = SubResource("LabelSettings_un82t")
+horizontal_alignment = 1
+vertical_alignment = 1

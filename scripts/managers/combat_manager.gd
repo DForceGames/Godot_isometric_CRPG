@@ -1,435 +1,354 @@
 extends Node
-class_name CombatManager
 
-# --- Signals ---
-signal combat_started
-signal combat_ended(result: String) # "victory", "defeat"
-signal turn_started(character_node: Node) # Emitted with the character whose turn is starting
-signal turn_ended(character_node: Node)   # Emitted with the character whose turn just ended
-signal action_taken(character_node: Node, ability_data: AbilityData, target_info: Dictionary)
-signal player_target_selection_required(character_node: Node, ability_data: AbilityData) # For UI/Grid to show targeting
-signal combat_log_message(message: String)
-signal turn_order_updated(new_turn_order: Array[Node]) # For TurnOrderUI to refresh
+# Signals
+signal combat_started(turn_order)
+signal combat_ended(result)
+signal turn_started(combatant)
+signal new_round_started(round_number)
+signal grid_made()
 
-# --- Enums ---
-enum CombatState {
-    IDLE,
-    INITIALIZING,
-    AWAITING_PLAYER_INPUT, # Player's turn, CombatManager waits for UI (e.g. AbilityBar) or Agent action
-    PLAYER_TARGETING,      # Player has selected an ability, agent is handling target selection on grid
-    ACTION_RESOLVING,
-    ENEMY_TURN_THINKING,
-    CHECKING_VICTORY_DEFEAT
-}
+var npc_id
 
-# --- Exported Variables (Links to other scenes/nodes) ---
-@export var ability_bar_node_path: NodePath  # Renamed for clarity
-@export var combat_grid_node_path: NodePath  # Renamed for clarity
-# turn_order_ui_node_path is not strictly needed here if UI connects to this manager's signals
+var turn_queue: Array[Node] = []
+var turn_index: int = 0
+var round_number: int = 1
+var is_combat_ended: bool = false
 
-# --- Public Variables ---
-var all_combatants: Array[Node] = []
-var player_party_nodes: Array[Node] = []
-var enemy_party_nodes: Array[Node] = []
+# Vars needed for gridmap and positions
+var astar_grid = AStarGrid2D.new()
+var grid_size
+var tileset: TileSet = null
+var active_tilemap: TileMapLayer = null
+var combatant_positions: Dictionary = {}
+var cell_size: Vector2 = Vector2(64, 32)
+var is_in_targeting_mode: bool = false
 
-var turn_order: Array[Node] = []
-var current_turn_index: int = -1
-var current_active_character: Node = null # This node is expected to HAVE a TurnBasedAgent script or be one
-var current_round: int = 0
+func start_combat(player_party, enemies):
+	turn_queue.clear()
+	turn_index = 0
+	round_number = 1
 
-var is_combat_active: bool = false
-var current_combat_state: CombatState = CombatState.IDLE
+	var combatants_with_rolls = []
 
-# UI
-const battle_ui_scene = preload("res://ui/BattleUI/main_battle_ui.tscn")
-var _battle_ui: CanvasLayer
+	initialize_grid()
 
-# --- Private Variables for Action Handling ---
-var _selected_ability_for_use: AbilityData = null # Set when UI ability is picked by player
-var _character_using_ability: Node = null       # Set when UI ability is picked by player
+	# Turn order setup
+	for player in player_party:
+		if is_instance_valid(player):
+			combatants_with_rolls.append({"Node": player,"Roll": player.stats.initiative})
+	
+	for enemy in enemies:
+		if is_instance_valid(enemy):
+			combatants_with_rolls.append({"Node": enemy,"Roll": enemy.stats.initiative})
+	
+	combatants_with_rolls.sort_custom(func(a, b): return a.Roll > b.Roll)
 
-# --- Node References (set in _ready or when combat starts) ---
-var _ability_bar: Node
-var _combat_grid: Node
-# var _turn_order_ui: Node # UI will get its data via signals
+	for combatant_data in combatants_with_rolls:
+		var combatant = combatant_data["Node"]
+		turn_queue.append(combatant)
+		if combatant.has_method("on_start_combat"):
+			combatant.on_start_combat()
 
-# ==============================================================================
-# Initialization
-# ==============================================================================
-func _ready():
-    add_to_group("CombatManager") # So other nodes (like TurnOrderUI) can find it
+	# Assign combatant positions based on their order in the turn queue
+	combatant_positions.clear()
+	for combatant in turn_queue:
+		var start_pos = world_to_map(combatant.global_position)
+		register_combatant_position(combatant, start_pos)
 
-    if not ability_bar_node_path.is_empty():
-        _ability_bar = get_node_or_null(ability_bar_node_path)
-        if _ability_bar and _ability_bar.has_signal("ability_selected_for_targeting"):
-            _ability_bar.ability_selected_for_targeting.connect(_on_ui_ability_selected_for_targeting)
-        elif _ability_bar:
-            printerr("CombatManager: AbilityBar node found but does not have 'ability_selected_for_targeting' signal.")
-        else:
-            printerr("CombatManager: AbilityBar node not found at path: ", ability_bar_node_path)
-            
-    if not combat_grid_node_path.is_empty():
-        _combat_grid = get_node_or_null(combat_grid_node_path)
+	combat_started.emit(turn_queue)
+	print("CombatManager: Combatants sorted by initiative rolls:", turn_queue)
 
-    # Create UI
-    if battle_ui_scene:
-        _battle_ui = battle_ui_scene.instantiate()
-        add_child(_battle_ui)
-    else:
-        printerr("CombatManager: Failed to load BattleUI scene.")
-
-
-func initialize_combat_encounter(player_nodes: Array[Node], enemy_nodes: Array[Node]):
-    if is_combat_active:
-        printerr("CombatManager: Cannot initialize new combat while one is already active.")
-        return
-
-    current_combat_state = CombatState.INITIALIZING
-    emit_combat_log_message("Combat initiated!")
-
-    player_party_nodes = player_nodes
-    enemy_party_nodes = enemy_nodes
-    all_combatants.clear()
-    all_combatants.append_array(player_party_nodes)
-    all_combatants.append_array(enemy_party_nodes)
-
-    for combatant in all_combatants:
-        if not is_instance_valid(combatant):
-            printerr("CombatManager: Invalid combatant found during initialization.")
-            return
-        # combatant.enter_combat_mode() # Example
-
-    _calculate_turn_order() # This will also emit turn_order_updated
-
-    is_combat_active = true
-    current_turn_index = -1
-    current_round = 0
-    
-    emit_signal("combat_started")
-    _start_next_turn()
-
-# ==============================================================================
-# Turn Management
-# ==============================================================================
-func _calculate_turn_order():
-    turn_order.clear()
-    # Simple turn order: all players, then all enemies.
-    # TODO: Implement a proper initiative system (e.g., based on a 'speed' stat from Stats component).
-    turn_order.append_array(player_party_nodes)
-    turn_order.append_array(enemy_party_nodes)
-    
-    # Example initiative sort (requires 'initiative' or 'speed' in Stats.gd)
-    # turn_order.sort_custom(func(a, b):
-    #     var stats_a = a.get_node_or_null("Stats")
-    #     var stats_b = b.get_node_or_null("Stats")
-    #     if stats_a and stats_b and stats_a.has_method("get_initiative") and stats_b.has_method("get_initiative"):
-    #         return stats_a.get_initiative() > stats_b.get_initiative()
-    #     return false # Default sort or error
-    # )
-    emit_signal("turn_order_updated", turn_order)
-
-
-func _start_next_turn():
-    if not is_combat_active:
-        return
-
-    # Deactivate previous character's agent if it was active
-    if is_instance_valid(current_active_character):
-        var prev_agent_node = _get_agent_from_character(current_active_character)
-        if prev_agent_node:
-            prev_agent_node.set_active(false)
-            if prev_agent_node.is_connected("target_selected", _on_player_agent_target_confirmed):
-                prev_agent_node.target_selected.disconnect(_on_player_agent_target_confirmed)
-
-    current_turn_index += 1
-    if current_turn_index >= turn_order.size():
-        current_turn_index = 0
-        current_round += 1
-        emit_combat_log_message("Round %s begins." % (current_round + 1))
-
-    current_active_character = turn_order[current_turn_index]
-
-    if not is_instance_valid(current_active_character) or not _is_combatant_able_to_act(current_active_character):
-        emit_combat_log_message("%s's turn skipped (incapacitated)." % current_active_character.name if is_instance_valid(current_active_character) else "Invalid combatant")
-        _end_current_turn_actions()
-        return
-
-    emit_combat_log_message("%s's turn." % current_active_character.name)
-
-    # Replenish Resources at the start of the turn using Stats component
-    var stats_comp = current_active_character.get_node_or_null("Stats")
-    if stats_comp:
-        if stats_comp.has_method("replenish_action_points"):
-            stats_comp.replenish_action_points() # Reset AP to max at start of turn
-        else:
-            stats_comp.current_ap = stats_comp.max_action_points 
-
-        if stats_comp.has_method("replenish_step_points"):
-            stats_comp.replenish_step_points() # Reset SP to max at start of turn
-        else:
-            stats_comp.current_sp = stats_comp.max_step_points
-
-    # Handle turn-based cooldowns
-    var ability_comp = current_active_character.get_node_or_null("AbilityComponent")
-    if ability_comp and ability_comp.has_method("decrement_turn_based_cooldowns"):
-        ability_comp.decrement_turn_based_cooldowns()
-
-    emit_signal("turn_started", current_active_character)
-
-    # Activate the agent component of the character
-    var agent_node = _get_agent_from_character(current_active_character)
-    if agent_node:
-        agent_node.set_active(true)
-
-    if _ability_bar and _ability_bar.has_method("set_active_character"):
-        _ability_bar.set_active_character(current_active_character)
-    
-    if _is_player_controlled(current_active_character):
-        current_combat_state = CombatState.AWAITING_PLAYER_INPUT
-        # CombatManager now waits for UI (e.g. AbilityBar) to trigger _on_ui_ability_selected_for_targeting
-    else:
-        current_combat_state = CombatState.ENEMY_TURN_THINKING
-        _handle_enemy_turn(current_active_character)
-
-
-func _end_current_turn_actions():
-    # Deactivate current character's agent (also done at start of next turn, but good for clarity)
-    if is_instance_valid(current_active_character):
-        var agent_node = _get_agent_from_character(current_active_character)
-        if agent_node:
-            agent_node.set_active(false)
-            if agent_node.is_connected("target_selected", _on_player_agent_target_confirmed):
-                agent_node.target_selected.disconnect(_on_player_agent_target_confirmed)
-    
-    emit_signal("turn_ended", current_active_character)
-    current_combat_state = CombatState.CHECKING_VICTORY_DEFEAT
-    
-    _selected_ability_for_use = null
-    _character_using_ability = null
-    if _combat_grid and _combat_grid.has_method("clear_targeting_overlays"):
-        _combat_grid.clear_targeting_overlays()
-
-    if _check_win_loss_conditions():
-        return 
-
-    if is_combat_active:
-        _start_next_turn()
-    else:
-        current_combat_state = CombatState.IDLE
-
-# ==============================================================================
-# Player Action Handling
-# ==============================================================================
-func _on_ui_ability_selected_for_targeting(character: Node, ability_data: AbilityData):
-    if not is_combat_active or current_combat_state != CombatState.AWAITING_PLAYER_INPUT:
-        return
-    if character != current_active_character:
-        printerr("CombatManager: Ability selected for non-active character.")
-        return
-
-    var ability_comp = character.get_node_or_null("AbilityComponent")
-    var stats_comp = character.get_node_or_null("Stats") # Get stats for can_use_ability
-
-    if not ability_comp or not stats_comp or not ability_comp.can_use_ability(ability_data, stats_comp): # Pass stats
-        emit_combat_log_message("Cannot use %s." % ability_data.ability_name)
-        return
-
-    _character_using_ability = character
-    _selected_ability_for_use = ability_data
-    current_combat_state = CombatState.PLAYER_TARGETING
-    
-    var agent_node = _get_agent_from_character(character)
-    if agent_node:
-        if not agent_node.target_selected.is_connected(_on_player_agent_target_confirmed):
-            agent_node.target_selected.connect(_on_player_agent_target_confirmed)
-        if agent_node.has_method("prepare_to_select_target"):
-            agent_node.prepare_to_select_target(ability_data) # Tell agent to start targeting mode
-            
-    emit_signal("player_target_selection_required", character, ability_data) # For CombatGrid
-    emit_combat_log_message("Select target for %s." % ability_data.ability_name)
-
-    if _combat_grid and _combat_grid.has_method("show_valid_targets_for_ability"):
-        _combat_grid.show_valid_targets_for_ability(character, ability_data)
-
-# Called when the TurnBasedAgent confirms a target after player input
-func _on_player_agent_target_confirmed(target_node: Node, command_data: AbilityData):
-    if not is_combat_active or current_combat_state != CombatState.PLAYER_TARGETING:
-        printerr("CombatManager: Not in targeting state or combat inactive for agent confirmation.")
-        return
-    if _character_using_ability != current_active_character:
-        printerr("CombatManager: Target confirmed for non-active character.")
-        return
-    if command_data != _selected_ability_for_use:
-        printerr("CombatManager: Agent confirmed target for a different ability than selected by UI.")
-        # Optionally reset or show error to player
-        current_combat_state = CombatState.AWAITING_PLAYER_INPUT # Revert state
-        var agent_node = _get_agent_from_character(_character_using_ability)
-        if agent_node and agent_node.has_method("cancel_targeting"): agent_node.cancel_targeting()
-        return
-
-    var target_info: Dictionary = {"primary_target": target_node} 
-    # More complex target_info can be built here if ability has AoE based on primary_target, etc.
-    
-    confirm_target_and_execute_action(target_info)
-
-# This function executes the action once ability and target are fully confirmed
-func confirm_target_and_execute_action(target_info: Dictionary):
-    if not is_combat_active or current_combat_state != CombatState.PLAYER_TARGETING: # Should be targeting or resolving
-         # If called directly after agent confirmation, state is still PLAYER_TARGETING
-        pass # Allow this if called from _on_player_agent_target_confirmed
-
-    if not _selected_ability_for_use or not _character_using_ability:
-        printerr("CombatManager: No ability or character was prepared for execution.")
-        current_combat_state = CombatState.AWAITING_PLAYER_INPUT # Revert
-        return
-
-    current_combat_state = CombatState.ACTION_RESOLVING
-    emit_combat_log_message("Executing %s..." % _selected_ability_for_use.ability_name)
-
-    var ability_comp = _character_using_ability.get_node_or_null("AbilityComponent")
-    if ability_comp:
-        # Pass character node itself, not just stats, to use_ability if it needs more from character
-        ability_comp.use_ability(_selected_ability_for_use.id, _character_using_ability, target_info)
-        emit_signal("action_taken", _character_using_ability, _selected_ability_for_use, target_info)
-        
-        var current_ap = _get_combatant_current_ap(_character_using_ability)
-        if current_ap <= 0 or _selected_ability_for_use.ends_turn: # Assuming AbilityData has 'ends_turn'
-            _end_current_turn_actions()
-        else:
-            current_combat_state = CombatState.AWAITING_PLAYER_INPUT
-            if _ability_bar and _ability_bar.has_method("update_ability_visuals"):
-                 _ability_bar.update_ability_visuals(_character_using_ability) # Pass char to update for
-            _selected_ability_for_use = null # Ready for next ability selection
-            # _character_using_ability remains current_active_character
-            if _combat_grid and _combat_grid.has_method("clear_targeting_overlays"):
-                _combat_grid.clear_targeting_overlays()
-    else:
-        printerr("CombatManager: Active character has no AbilityComponent.")
-        current_combat_state = CombatState.AWAITING_PLAYER_INPUT
-
-    # Disconnect agent's signal after action is resolved or if turn ends
-    var agent_node = _get_agent_from_character(_character_using_ability)
-    if agent_node and agent_node.is_connected("target_selected", _on_player_agent_target_confirmed):
-        agent_node.target_selected.disconnect(_on_player_agent_target_confirmed)
-
-
-func player_ends_turn():
-    if not is_combat_active or current_combat_state != CombatState.AWAITING_PLAYER_INPUT:
-        return
-    if not _is_player_controlled(current_active_character):
-        return
-    
-    emit_combat_log_message("%s ends their turn." % current_active_character.name)
-    _end_current_turn_actions()
-
-# ==============================================================================
-# Enemy AI Handling
-# ==============================================================================
-func _handle_enemy_turn(enemy_node: Node):
-    emit_combat_log_message("%s is thinking..." % enemy_node.name)
-    
-    # TODO: Implement Enemy AI logic
-    # 1. Get AbilityComponent and StatsComponent from enemy_node.
-    # 2. Query AbilityComponent for usable abilities (check AP, cooldowns).
-    # 3. Analyze battlefield (player positions, healths - needs access to player_party_nodes).
-    # 4. Choose an ability and target(s).
-    # 5. Call enemy_node.get_node("AbilityComponent").use_ability(chosen_ability.id, enemy_node, chosen_target_info)
-    
-    # Placeholder: Enemy does nothing and ends turn after a short delay
-    await get_tree().create_timer(1.0).timeout 
-    if not is_combat_active: return # Combat might have ended
-
-    # Example: Placeholder action
-    # var ability_comp = enemy_node.get_node_or_null("AbilityComponent")
-    # if ability_comp and not ability_comp.known_abilities.is_empty():
-    #    var first_ability = ability_comp.known_abilities[0]
-    #    var stats_comp = enemy_node.get_node_or_null("Stats")
-    #    if ability_comp.can_use_ability(first_ability, stats_comp):
-    #        var target_player = player_party_nodes.pick_random() # Simplistic target
-    #        if is_instance_valid(target_player):
-    #            emit_combat_log_message("%s uses %s on %s (placeholder AI)." % [enemy_node.name, first_ability.ability_name, target_player.name])
-    #            ability_comp.use_ability(first_ability.id, enemy_node, {"primary_target": target_player})
-    #            emit_signal("action_taken", enemy_node, first_ability, {"primary_target": target_player})
-    #        else:
-    #            emit_combat_log_message("%s has no valid player target (placeholder AI)." % enemy_node.name)
-    #    else:
-    #         emit_combat_log_message("%s cannot use its first ability (placeholder AI)." % enemy_node.name)
-    # else:
-    #    emit_combat_log_message("%s has no abilities (placeholder AI)." % enemy_node.name)
-
-    emit_combat_log_message("%s ends their turn (placeholder AI)." % enemy_node.name)
-    _end_current_turn_actions()
-
-# ==============================================================================
-# Combat Resolution & Helpers
-# ==============================================================================
-func _check_win_loss_conditions() -> bool:
-    var all_players_incapacitated = true
-    for player_node in player_party_nodes:
-        if _is_combatant_able_to_act(player_node):
-            all_players_incapacitated = false
-            break
-    if all_players_incapacitated and not player_party_nodes.is_empty(): # Ensure there were players to begin with
-        end_combat("defeat")
-        return true
-
-    var all_enemies_incapacitated = true
-    for enemy_node in enemy_party_nodes:
-        if _is_combatant_able_to_act(enemy_node):
-            all_enemies_incapacitated = false
-            break
-    if all_enemies_incapacitated and not enemy_party_nodes.is_empty(): # Ensure there were enemies
-        end_combat("victory")
-        return true
-        
-    return false
+	next_turn()
 
 func end_combat(result: String):
-    if not is_combat_active: return
-    is_combat_active = false
-    current_combat_state = CombatState.IDLE
-    
-    if result == "victory": emit_combat_log_message("Victory!")
-    elif result == "defeat": emit_combat_log_message("Defeat...")
-        
-    emit_signal("combat_ended", result)
-    
-    for combatant in all_combatants:
-        if is_instance_valid(combatant) and combatant.has_method("exit_combat_mode"):
-            combatant.exit_combat_mode()
-        # Deactivate any remaining active agents
-        var agent_node = _get_agent_from_character(combatant)
-        if agent_node and agent_node.is_active: # Check agent's own is_active state
-            agent_node.set_active(false)
+	# Safety check
+	if is_combat_ended:
+		return
+	
+	# Signal for rewards or loss
+	is_combat_ended = true
+	combat_ended.emit(result)
 
-func _is_player_controlled(character_node: Node) -> bool:
-    return player_party_nodes.has(character_node)
+	# Cleanup
+	for combatant in turn_queue:
+		if not is_instance_valid(combatant):
+			if combatant.has_method("end_combat"):
+				continue
 
-func _is_combatant_able_to_act(character_node: Node) -> bool:
-    if not is_instance_valid(character_node): return false
-    var stats_comp = character_node.get_node_or_null("Stats")
-    if stats_comp: # Assuming Stats has current_health
-        return stats_comp.current_health > 0
-    
-    printerr("CombatManager: Cannot determine if %s is able to act (no Stats component or health info)." % character_node.name)
-    return false
+		# if combatant.died.is_connected(on_combatant_died):
+		#     combatant.died.disconnect(on_combatant_died)
 
-func _get_combatant_current_ap(character_node: Node) -> int:
-    if not is_instance_valid(character_node): return 0
-    var stats_comp = character_node.get_node_or_null("Stats")
-    if stats_comp:
-        return stats_comp.current_ap
-    
-    printerr("CombatManager: Cannot get current AP for %s (no Stats component)." % character_node.name)
-    return 0
+		if combatant.has_method("end_combat"):
+			combatant.end_combat()
+		
+	# Reset
+	combatant_positions.clear()
+	turn_queue.clear()
+	turn_index = -1
+	round_number = 1
 
-func emit_combat_log_message(message: String):
-    print("COMBAT LOG: ", message)
-    emit_signal("combat_log_message", message)
+func check_end_of_combat_conditions():
+	if is_combat_ended:
+		return
+	
+	var player_combatants_alive = false
+	var enemy_combatants_alive = false
 
-func _get_agent_from_character(character_node: Node) -> TurnBasedAgent:
-    if not is_instance_valid(character_node): return null
-    if character_node is TurnBasedAgent:
-        return character_node as TurnBasedAgent
-    # Common pattern: Agent script is on a child node. Adjust name if different.
-    return character_node.get_node_or_null("TurnBasedAgent") as TurnBasedAgent
+	for combatant in turn_queue:
+		if combatant.is_dead():
+			continue
+		if combatant.is_in_group("Player"):
+			player_combatants_alive = true
+		elif combatant.is_in_group("Enemy"):
+			enemy_combatants_alive = true
+
+	if not player_combatants_alive:
+		end_combat("DEFEAT")
+		return
+	elif not enemy_combatants_alive:
+		end_combat("VICTORY")
+	
+	return
+
+# handle turn logic
+func next_turn():
+	# safety check
+	if is_combat_ended:
+		return
+	
+	turn_index += 1
+	
+	# Check turn and round progression
+	if turn_index >= turn_queue.size():
+		turn_index = 0
+		round_number += 1
+		new_round_started.emit(round_number)
+	
+	var current_combatant = turn_queue[turn_index]
+	# Skip dead combatants
+	while is_instance_valid(current_combatant) and current_combatant.stats.is_alive() == false:
+		print("CombatManager: Skipping dead combatant %s" % current_combatant.name)
+		next_turn()
+		return
+
+	_begin_turn_for(current_combatant)
+
+func _begin_turn_for(combatant: Node):
+	if combatant.has_method("on_start_turn"):
+		combatant.on_start_turn()
+	
+	if combatant.has_method("process_statuses"):
+		combatant.process_statuses()
+	
+	if combatant.stats.is_alive() == false:
+		print("CombatManager: Combatant %s is dead, skipping turn." % combatant.name)
+		next_turn()
+		return
+	
+	turn_started.emit(combatant)
+
+func end_current_turn():
+	# safety check
+	if is_combat_ended:
+		return
+	
+	check_end_of_combat_conditions()
+	
+	next_turn()
+
+# ---------------------------- Setup Battle Map with logic ----------------------------
+
+func set_active_tilemap(tilemap: TileMapLayer):
+	active_tilemap = tilemap
+	print("CombatManager: Active tilemap set to ", active_tilemap.name)
+
+func initialize_grid():
+	print("CombatManager: Initializing grid...")
+	if not active_tilemap:
+		print("Cannot initialize grid: No primary_tilemap_layer set")
+		return
+	
+	if tileset == null:
+		tileset = active_tilemap.tile_set
+		if tileset == null:
+			print("Cannot initialize grid: No tileset found in active_tilemap")
+			return
+
+	# Now you can use the active_tilemap to determine grid size if needed
+	grid_size = active_tilemap.get_used_rect()
+	print("Grid initialized with size: ", grid_size)
+	astar_grid.region = grid_size  # Use the region property directly with Rect2i
+	astar_grid.offset = cell_size / 2  # Center the grid on the origin
+	astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	astar_grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	astar_grid.cell_shape = AStarGrid2D.CELL_SHAPE_ISOMETRIC_DOWN
+	astar_grid.update()
+	print("Grid made, isometric: ", astar_grid.default_estimate_heuristic)
+	
+	# Set tiles solid based on groups
+	set_tiles_solid_from_groups()
+
+	grid_made.emit()
+
+func world_to_map(world_position: Vector2):
+	if not active_tilemap:
+		printerr("CombatManager: No active tilemap set!")
+		return Vector2.ZERO
+	
+	return active_tilemap.local_to_map(world_position)
+
+func map_to_world(map_position: Vector2): # Gets it to the centre of the tile
+	if not active_tilemap:
+		printerr("CombatManager: No active tilemap set!")
+		return Vector2.ZERO
+
+	return active_tilemap.map_to_local(map_position)
+# Still gridmap related
+func register_combatant_position(combatant: Node, map_position: Vector2):
+	combatant_positions[map_position] = combatant
+
+func get_combatant_at_tile(map_position: Vector2):
+	return combatant_positions.get(map_position, null)
+
+func get_aoe_tiles(center_tile: Vector2i, ability: AbilityData) -> Array[Vector2i]:
+	print("CombatManager: Getting AoE tiles for ability: ", ability.ability_name, " wiht AoE shape: ", ability.aoe_shape, " at center tile: ", center_tile)
+	var affected_tiles: Array[Vector2i] = []
+	match ability.aoe_shape:
+		1: # Circle
+			var radius = ability.area_of_effect_radius if ability else 1
+			for x in range(-radius, radius + 1):
+				for y in range(-radius, radius + 1):
+					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
+					if tile.distance_to(center_tile) <= radius and astar_grid.region.has_point(tile):
+						affected_tiles.append(tile)
+		2: # Square
+			var size = ability.area_of_effect_radius if ability else 1
+			for x in range(-size, size + 1):
+				for y in range(-size, size + 1):
+					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
+					if astar_grid.region.has_point(tile):
+						affected_tiles.append(tile)
+		0: #None
+			# No AoE, just return the center tile
+			if astar_grid.region.has_point(center_tile):
+				affected_tiles.append(center_tile)
+
+	print("CombatManager: Affected tiles for ability ", ability.ability_name, ": ", affected_tiles)
+	return affected_tiles
+
+func set_tiles_solid_from_groups() -> void:
+	if not active_tilemap or not tileset:
+		print("Cannot set tiles solid: No active_tilemap or tileset found")
+		return
+	
+	if not astar_grid:
+		print("Cannot set tiles solid: AStarGrid2D not initialized")
+		return
+	
+	var used_cells = active_tilemap.get_used_cells()
+	var custom_data_layer_name = "Solid" # Custom property to set as solid
+
+	for cell_coords in used_cells:
+		if not astar_grid.region.has_point(cell_coords):
+			continue
+		
+		var tile_data: TileData = active_tilemap.get_cell_tile_data(cell_coords)
+
+		if tile_data:
+			var is_tile_solid = tile_data.get_custom_data(custom_data_layer_name)
+
+			if typeof(is_tile_solid) == TYPE_BOOL and is_tile_solid == true:
+				print("Tile set as solid at cell: ", cell_coords)
+				astar_grid.set_point_solid(cell_coords, true)
+			else:
+				continue
+
+func get_tile_path(target_cell, player):
+	var dynamic_obstacle_cells = []
+	var entitie_groups = ["Enemy", "Player", "NPC", "Ally"]
+
+	for group in entitie_groups:
+		var nodes = get_tree().get_nodes_in_group(group)
+		for node in nodes:
+			if node == self:
+				# print("Skipping self node in dynamic obstacle detection ", node.name)
+				continue # Skip self
+			if node is CharacterBody2D or node is Node2D:
+				# print("Adding dynamic obstacle for node: ", node.name)
+				var node_pos = node.global_position
+				var local_pos = active_tilemap.to_local(node_pos)
+				var cell = world_to_map(local_pos)
+
+				if grid_size.has_point(cell):
+					astar_grid.set_point_solid(cell, true)
+					dynamic_obstacle_cells.append(cell)
+	var new_path = []
+
+	var player_cell = world_to_map(player.global_position)
+	if not astar_grid.is_point_solid(target_cell):	
+		new_path = astar_grid.get_id_path(player_cell, target_cell)
+
+	for cell in dynamic_obstacle_cells:
+		CombatManager.astar_grid.set_point_solid(cell, false)
+	return new_path
+
+func get_tiles_in_range(start_pos: Vector2i, range_value: int, player):
+	var tiles_in_range: Array[Vector2i] = []
+	var visited: Dictionary = {}
+	var queue: Array = []
+
+	if not CombatManager.active_tilemap or not CombatManager.astar_grid:
+		printerr("PlayerMovement: Cannot get tiles in range. Missing TileMapLayer or AStarGrid.")
+		return tiles_in_range
+
+	var dynamic_obstacle_cells: Array[Vector2i] = []
+	var entitie_groups = ["Enemy", "Player", "NPC", "Ally"] # Consider all relevant groups
+
+	if not is_in_targeting_mode:
+		for group_name in entitie_groups:
+			var nodes_in_group = get_tree().get_nodes_in_group(group_name)
+			for node_instance in nodes_in_group:
+				if node_instance == player: # Don't block the starting player tile itself for range calculation
+					continue
+				if node_instance is Node2D: # Check if it's a Node2D to get global_position
+					var entity_map_pos = CombatManager.world_to_map(node_instance.global_position)
+					if CombatManager.astar_grid.region.has_point(entity_map_pos) and not CombatManager.astar_grid.is_point_solid(entity_map_pos):
+						CombatManager.astar_grid.set_point_solid(entity_map_pos, true)
+						dynamic_obstacle_cells.append(entity_map_pos)
+
+	queue.push_back({"pos": start_pos, "dist": 0})
+	
+	while not queue.is_empty():
+		var current = queue.pop_front()
+		var pos: Vector2i = current["pos"]
+		var dist: int = current["dist"]
+		
+		if visited.has(pos) or dist > range_value:
+			continue
+			
+		visited[pos] = dist
+
+		if CombatManager.astar_grid.region.has_point(pos) and not CombatManager.astar_grid.is_point_solid(pos):
+			tiles_in_range.append(pos)
+			
+			if dist < range_value:
+				var neighbors = [
+					Vector2i(pos.x + 1, pos.y),
+					Vector2i(pos.x - 1, pos.y),
+					Vector2i(pos.x, pos.y + 1),
+					Vector2i(pos.x, pos.y - 1)
+				]
+				for neighbor_pos in neighbors:
+					if CombatManager.astar_grid.region.has_point(neighbor_pos): # Check if neighbor is within grid
+						queue.push_back({"pos": neighbor_pos, "dist": dist + 1})
+
+	for cell_to_revert in dynamic_obstacle_cells:
+		var tile_data: TileData = CombatManager.active_tilemap.get_cell_tile_data(cell_to_revert)
+		var is_permanently_solid = false
+		if tile_data:
+			is_permanently_solid = tile_data.get_custom_data("Solid") == true
+		
+		if not is_permanently_solid:
+			CombatManager.astar_grid.set_point_solid(cell_to_revert, false)
+
+	return tiles_in_range

@@ -2,90 +2,101 @@ extends CharacterBody2D
 class_name Player
 
 var speed: float = 100.0
-@export var tilemap_path: NodePath
 @export var interaction_groups: Array[String] = ["interactable", "NPC", "Container", "pickup"]
 
-# Player Stats
+# Player Stats, further stats are in the shared stats.gd
 var player_name: String = "Player"
 var experience: int = 0
+@export var stats: Stats
 
 # References
 var game_state_manager
-var movement_system
+var combat_manager
 var interaction_distance: float = 64.0
 var current_nearby_npc: NPC = null
+var is_my_turn: bool = false
+@onready var movement_system = $PlayerMovement
 
 # Signals
-signal resources_refreshed(current_health, max_health, action_points, max_sp)
-signal _on_sp_changed(current_sp: int)
+
 
 func _ready() -> void:
+	# Register player in PartyManager
+	PartyManager.register_main_character(self)
+	print("Player: Registered main character with PartyManager")
+	
 	await get_tree().process_frame
 	# Get GameStateManager
 	game_state_manager = get_node_or_null("/root/GameStateManager")
-	if game_state_manager:
-		game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
+	# if game_state_manager:
+	# 	game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
+
+	combat_manager = get_node_or_null("/root/CombatManager")
+	if combat_manager:
+		combat_manager.combat_started.connect(on_combat_started)
+		combat_manager.combat_ended.connect(on_combat_ended)
+		combat_manager.turn_started.connect(on_combat_manager_turn_started)
 	
-	# Setup movement system
-	movement_system = get_node_or_null("PlayerMovement")
-	if movement_system:
-		_setup_movement_system()
-	else:
-		printerr("Player: PlayerMovement node not found as a child")
+	# Get player stats
+	if not stats:
+		printerr("Player: No stats resource assigned!")
+		return
+	stats.initialize_stats()
+
+	# stats.sp_changed.connect(_on_sp_changed)
+	stats.died.connect(_on_died)
 
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed()):
+	if combat_manager and combat_manager.is_combat_ended and not is_my_turn:
 		return
-		
-	var interactable = get_interactable_at_mouse_position()
-	if interactable:
-		if is_within_interaction_distance(interactable):
-			interactable.interact()
-			if interactable is NPC:
-				current_nearby_npc = interactable
-		else:
-			# Move closer to interactable
-			var pos_to_move = position_one_tile_away_from(interactable)
-			move_to_position(pos_to_move)
+
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.is_pressed():
+		if combat_manager.is_in_targeting_mode:
+			movement_system.stop_targeting_mode()
+			return
+		var target_pos = get_global_mouse_position()
+		movement_system.set_movement_target(target_pos)
+		print("Player: Right-clicked to move to position ", target_pos)
+	
+
+# Combat handlers -------------------------------------------------------------
+
+func on_combat_started(_turn_queue):
+	is_my_turn = false
+
+func on_combat_ended():
+	is_my_turn = false
+
+func on_combat_manager_turn_started(combatant):
+	if combatant == self:
+		is_my_turn = true
+		stats.on_turn_started(combatant)
 	else:
-		# Move to clicked position
-		move_to_position(get_global_mouse_position())
+		is_my_turn = false
+		print("Player: Not my turn anymore")
 
-# Movement and animation -------------------------------------------------------------
+func _on_died():
+	$AnimatedSprite2D.play("Death")
+	emit_signal("died", self)
 
-func _setup_movement_system() -> void:
-	# Just initialize with the tilemap
-	if not tilemap_path.is_empty():
-		var tilemap = get_node_or_null(tilemap_path)
-		if tilemap:
-			movement_system.primary_tilemap_layer = tilemap
-			movement_system.speed = speed
-			movement_system.initialize_grid()
+func take_damage(damage_amount):
+	if not stats:
+		return
+	stats.take_damage(damage_amount)
+
+func is_dead() -> bool:
+	if not stats: return true
+	return not stats.is_alive()
 
 # Simple function to tell movement system where to go
-func move_to_position(target_pos: Vector2) -> void:
-	if not movement_system:
-		return
-	
-	# Check if we're in turn-based mode
-	if game_state_manager and game_state_manager.is_turn_based():
-		# Let the movement system handle turn-based movement with SP costs
-		movement_system.handle_turn_based_movement(target_pos)
-	else:
-		# Regular real-time path following
-		movement_system.start = global_position
-		movement_system.end = target_pos
-		movement_system.get_ideal_path()
+func _on_game_mode_changed(new_mode):
+	if movement_system:
+		movement_system._handle_game_mode_changed(new_mode)
 
 func _physics_process(_delta: float) -> void:
-	if movement_system and movement_system.path.size() > 0: # and GameStateManager.is_turn_based():
-		movement_system.follow_path() # Moved to movement_player
-	else:
-		velocity = Vector2.ZERO
-	
-	if velocity != Vector2.ZERO:
+	if velocity.length_squared() > 0:
 		move_and_slide()
-	
+
 	_update_player_animations()
 
 func _update_player_animations() -> void:
@@ -94,31 +105,23 @@ func _update_player_animations() -> void:
 		return
 		
 	if velocity == Vector2.ZERO:
-		if anim_sprite.animation != "idle":
-			anim_sprite.play("idle")
+		if anim_sprite.animation != "Idle":
+			anim_sprite.play("Idle")
 		return
 			
 	var target_animation = ""
 	if velocity.x < -0.01: # Moving significantly left
-		target_animation = "walking_left"
+		target_animation = "Walking_Left"
 	elif velocity.x > 0.01: # Moving significantly right
-		target_animation = "walking_right"
+		target_animation = "Walking_Right"
 	else: # Moving predominantly vertically
-		if anim_sprite.animation == "walking_left" or anim_sprite.animation == "walking_right":
+		if anim_sprite.animation == "Walking_Left" or anim_sprite.animation == "Walking_Right":
 			target_animation = anim_sprite.animation
 		else:
-			target_animation = "walking_right"
+			target_animation = "Walking_Right"
 	
 	if anim_sprite.animation != target_animation:
 		anim_sprite.play(target_animation)
-
-func _on_game_mode_changed(new_mode) -> void:
-	if movement_system and movement_system.has_method("handle_game_mode_changed"):
-		movement_system.handle_game_mode_changed(new_mode)
-	
-	var anim_sprite = $AnimatedSprite2D
-	if anim_sprite and velocity == Vector2.ZERO:
-		anim_sprite.play("idle")
 
 # Interaction Functions ------------------------------------------------------------------------
 
@@ -174,18 +177,3 @@ func end_npc_interaction() -> void:
 	if current_nearby_npc and current_nearby_npc.has_method("end_interaction"):
 		current_nearby_npc.end_interaction()
 		current_nearby_npc = null
-
-# Resouces -------------------------------------------------------------------------------------
-
-# func refresh_resources() -> void:
-	
-# 	# Reset any other resources as needed
-# 	print("Player resources refreshed")
-	
-# 	# Optionally reset inventory or other game state
-# 	# if game_state_manager:
-# 	# 	game_state_manager.refresh_inventory()
-
-# 	if movement_system:
-# 		movement_system.current_sp = Stats.max_sp
-# 		emit_signal("_on_sp_changed", movement_system.current_sp)
