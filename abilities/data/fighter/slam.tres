@@ -14,6 +14,7 @@ cooldown_time = 2.0
 max_range = 1
 min_range = 0
 ability_power = 2.25
+aoe_shape = 0
 area_of_effect_radius = 0
 animation_name = &""
 target_type = 0

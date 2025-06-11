@@ -41,11 +41,5 @@ enum TargetType {
 }
 @export var target_type: TargetType = TargetType.SELF
 
-# You might add a base 'execute' method here if there's common activation logic,
-# or leave it to an AbilityHandler.
-# func activate(caster: Node, target_data: Dictionary):
-#     pass
-#func use_ability(caster: Node, target_data: Dictionary) -> void:
-	# This method can be overridden by specific ability implementations
-	# to define how the ability is used.
-	#pass
+func use_ability(tile):
+	print("Using ability: ", ability_name, " at tile: ", tile)

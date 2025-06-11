@@ -351,16 +351,25 @@ func _input(event: InputEvent) -> void:
 				var timer = Timer.new()
 				timer.name = "_hover_timer"
 				timer.one_shot = true
-				timer.wait_time = 0.1
+				timer.wait_time = 0.05
 				timer.connect("timeout", Callable(self, "_update_turn_based_pathfinding_preview"))
 				add_child(timer)
 				timer.start()
+	
 
-	# Add this to your _input() function
-	if event is InputEventKey and event.pressed:
-		if Input.is_action_pressed("debug_key"):
-			print("Tiled debugview toggled")
-			# toggle_debug_view()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
+		if is_in_targeting_mode:
+			var clicked_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+			if clicked_tile in valid_target_tiles:
+				print("PlayerMovement: Clicked tile ", clicked_tile, " is a valid target tile.")
+				if target_ability:
+					target_ability.use_ability(clicked_tile)
+					if stats_component and target_ability.has_method("spend_ap"):
+						stats_component.spend_ap(target_ability.ap_cost)
+				stop_targeting_mode()
+				get_viewport().set_input_as_handled()
+			else:
+				print("PlayerMovement: Clicked tile ", clicked_tile, " is not a valid target tile.")
 
 # Show ranges and highlights in turn-based mode ---------------------------------------------------------------------
 func show_movement_range():
