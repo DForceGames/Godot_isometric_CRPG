@@ -13,6 +13,10 @@ var turn_index: int = 0
 var round_number: int = 1
 var is_combat_ended: bool = false
 
+# Vars needed for gridmap and positions
+var active_tilemap: TileMapLayer = null
+var combatant_positions: Dictionary = {}
+
 func start_combat(player_party, enemies):
 	turn_queue.clear()
 	turn_index = 0
@@ -42,6 +46,12 @@ func start_combat(player_party, enemies):
 		if combatant.has_method("on_start_combat"):
 			combatant.on_start_combat()
 
+	# Assign combatant positions based on their order in the turn queue
+	combatant_positions.clear()
+	for combatant in turn_queue:
+		var start_pos = world_to_map(combatant.global_position)
+		register_combatant_position(combatant, start_pos)
+
 	combat_started.emit(turn_queue)
 	print("CombatManager: Combatants sorted by initiative rolls:", turn_queue)
 
@@ -69,6 +79,7 @@ func end_combat(result: String):
 			combatant.end_combat()
 		
 	# Reset
+	combatant_positions.clear()
 	turn_queue.clear()
 	turn_index = -1
 	round_number = 1
@@ -141,3 +152,29 @@ func end_current_turn():
 	check_end_of_combat_conditions()
 	
 	next_turn()
+
+# --- Setup Battle Map with logic ---
+
+func set_active_tilemap(tilemap: TileMapLayer):
+	active_tilemap = tilemap
+	print("CombatManager: Active tilemap set to ", active_tilemap.name)
+
+func world_to_map(world_position: Vector2):
+	if not active_tilemap:
+		printerr("CombatManager: No active tilemap set!")
+		return Vector2.ZERO
+	
+	return active_tilemap.local_to_map(world_position)
+
+func map_to_world(map_position: Vector2): # Gets it to the centre of the tile
+	if not active_tilemap:
+		printerr("CombatManager: No active tilemap set!")
+		return Vector2.ZERO
+
+	return active_tilemap.map_to_local(map_position)
+# Still gridmap related
+func register_combatant_position(combatant: Node, map_position: Vector2):
+	combatant_positions[map_position] = combatant
+
+func get_combatant_at_tile(map_position: Vector2):
+	return combatant_positions.get(map_position, null)

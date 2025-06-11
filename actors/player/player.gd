@@ -82,9 +82,6 @@ func _on_health_changed(current_health, max_health):
 func _on_ap_changed(current_ap, max_ap):
 	emit_signal("ap_changed", current_ap, max_ap)
 
-# func _on_sp_changed(current_sp):
-# 	emit_signal("sp_changed", current_sp)
-
 func _on_died():
 	$AnimatedSprite2D.play("Death")
 	emit_signal("died", self)

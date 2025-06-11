@@ -1,5 +1,7 @@
 extends Node2D
 
+@onready var tilemap_layer: TileMapLayer = $Ground
+
 @onready var player_spawn_points: Array[Marker2D] = [$PlayerSpawns/Spawn1]
 @onready var enemy_spawn_points: Array[Marker2D] = [$EnemySpawns/Spawn1, $EnemySpawns/Spawn2, $EnemySpawns/Spawn3]
 
@@ -11,7 +13,7 @@ func _ready():
 	if not game_state_manager or not combat_manager or not party_manager:
 		printerr("BattleMap: GameStateManager not found!")
 		return
-	
+	combat_manager.set_active_tilemap(tilemap_layer)
 	var battle_data = game_state_manager.pending_battle_data
 	if battle_data.is_empty():
 		printerr("BattleMap: No battle data found in GameStateManager!")

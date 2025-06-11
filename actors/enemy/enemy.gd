@@ -75,6 +75,10 @@ func execute_turn():
 
 
 # --- Utility Function ---
+func take_damage(damage_amount):
+	if not stats:
+		return
+	stats.take_damage(damage_amount)
 
 func is_dead() -> bool:
 	if not stats: return true

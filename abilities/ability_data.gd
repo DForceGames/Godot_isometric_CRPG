@@ -14,6 +14,14 @@ class_name AbilityData
 @export var min_range: int = 0 # Minimum range, e.g., for melee abilities
 @export var ability_power: float = 0 # Base power of the ability, e.g., damage or healing amount
 
+@export_group("Targeting & Area of Effect")
+enum TargetType {
+	SELF,
+	ENEMY,
+	ALLY,
+	AREA
+}
+@export var target_type: TargetType = TargetType.SELF
 enum AoeShape {
 	NONE,
 	CIRCLE,
@@ -25,6 +33,7 @@ enum AoeShape {
 @export var aoe_shape: AoeShape = AoeShape.NONE # Area of effect shape 
 @export var area_of_effect_radius: int = 0 # For abilities that affect an area
 
+@export var effects: Array[AbilityEffect] = []
 
 @export_group("Visuals & Audio")
 @export var animation_name: StringName # Animation to play on the caster
@@ -33,13 +42,11 @@ enum AoeShape {
 @export var cast_sound: AudioStream
 @export var impact_sound: AudioStream
 
-enum TargetType {
-	SELF,
-	ENEMY,
-	ALLY,
-	AREA
-}
-@export var target_type: TargetType = TargetType.SELF
+func use_ability(user, center_tile):
+	print("Using ability: "+ ability_name)
+	var movement_system = user.get_node("PlayerMovement")
+	var affected_tiles = movement_system.get_aoe_tiles(center_tile, self)
 
-func use_ability(tile):
-	print("Using ability: ", ability_name, " at tile: ", tile)
+	for effect in effects:
+		if effect:
+			effect.execute(user, center_tile, affected_tiles)

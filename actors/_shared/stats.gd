@@ -55,6 +55,10 @@ func take_damage(damage_amount: int):
 	if effective_damage < 0:
 		effective_damage = 1
 	self.current_health -= effective_damage
+	print("Damage taken: ", effective_damage, " | Current Health: ", _current_health)
+	if _current_health <= 0:
+		print(name, " has died.")
+		died.emit()
 
 func is_alive() -> bool:
 	return _current_health > 0

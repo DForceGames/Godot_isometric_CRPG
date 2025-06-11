@@ -98,14 +98,14 @@ func _process(_delta: float):
 	if not is_in_targeting_mode and not is_turn_based_mode():
 		return  # Skip processing if not in targeting or turn-based mode
 
-	var current_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+	var current_tile = CombatManager.world_to_map(get_global_mouse_position())
 	if current_tile == last_hoverd_tile:
 		return
 
 	last_hoverd_tile = current_tile
 
 	if is_in_targeting_mode:
-		var mouse_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+		var mouse_tile = CombatManager.world_to_map(get_global_mouse_position())
 		_update_targeting_preview(mouse_tile)
 		return
 	elif is_turn_based_mode():
@@ -123,7 +123,7 @@ func initialize_grid() -> void:
 			return
 
 	# Now you can use the primary_tilemap_layer to determine grid size if needed
-	grid_size = Rect2i(Vector2i.ZERO, Vector2i(100, 100)) 
+	grid_size = primary_tilemap_layer.get_used_rect()
 	print("Grid initialized with size: ", grid_size)
 	astar_grid.region = grid_size  # Use the region property directly with Rect2i
 	astar_grid.offset = cell_size / 2  # Center the grid on the origin
@@ -158,59 +158,6 @@ func get_realtime_path() -> Array[Vector2]:
 	
 	# For now, return an empty path
 	return []
-
-# Grid-based pathfinding function ---------------------------------------------------------------------
-func get_ideal_path():
-	if start == end:
-		return []
-	
-	# Make sure we have a valid grid
-	if primary_tilemap_layer == null:
-		print("Cannot find path: No primary_tilemap_layer set")
-		return []
-	
-	# Check all nodes in the scene for blocking groups
-	for group in blocking_groups:
-		var nodes = get_tree().get_nodes_in_group(group)
-		for node in nodes:
-			if node is Node2D:
-				var node_pos = node.global_position
-				var local_pos = primary_tilemap_layer.to_local(node_pos)
-				var cell = primary_tilemap_layer.local_to_map(local_pos)
-				# Only mark if within grid bounds
-				if grid_size.has_point(cell):
-					astar_grid.set_point_solid(cell, true)
-
-	# Snap start and end positions to tile centers
-	var snapped_start = snap_to_tile(start)
-	var snapped_end = snap_to_tile(end)
-
-	# Convert world coordinates to grid coordinates	
-	var start_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_start))
-	var end_cell = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(snapped_end))
-	
-	print("Finding path from world pos ", snapped_start, " to ", snapped_end)
-	print("Converted to grid cells: from ", start_cell, " to ", end_cell)
-	
-	# Check if cells are within bounds
-	if not grid_size.has_point(start_cell) or not grid_size.has_point(end_cell):
-		print("Start or end position out of grid bounds")
-		return []
-		# Get path using grid coordinates
-	var id_path = astar_grid.get_id_path(start_cell, end_cell)
-	
-	if id_path.is_empty():
-		print("No path found from ", start_cell, " to ", end_cell)
-		return []
-	
-	# Convert path back to world coordinates
-	path = []
-	for cell_pos in id_path:
-		var world_pos = primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_pos))
-		path.append(world_pos)
-	
-	print("Path found with ", path.size()-1, " points")
-	return path
 
 func follow_path() -> void:
 	if not player: # Ensure player node is valid
@@ -269,7 +216,7 @@ func snap_to_tile(world_position: Vector2) -> Vector2:
 		
 	# Convert to tilemap coordinates
 	var local_pos = primary_tilemap_layer.to_local(world_position)
-	var map_pos = primary_tilemap_layer.local_to_map(local_pos)
+	var map_pos = CombatManager.world_to_map(local_pos)
 	
 	# Convert back to world coordinates (centered on tile)
 	# Add y_offset to ensure visual consistency
@@ -346,7 +293,7 @@ func _input(event: InputEvent) -> void:
 		
 	# Track mouse hover in turn-based mode for tile highlighting
 	if event is InputEventMouseMotion:
-		var new_hover_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+		var new_hover_tile = CombatManager.world_to_map(get_global_mouse_position())
 
 		if new_hover_tile != hover_tile:
 			hover_tile = new_hover_tile
@@ -354,11 +301,11 @@ func _input(event: InputEvent) -> void:
 	
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.is_pressed():
 		if is_in_targeting_mode:
-			var clicked_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+			var clicked_tile = CombatManager.world_to_map(get_global_mouse_position())
 			if clicked_tile in valid_target_tiles:
 				print("PlayerMovement: Clicked tile ", clicked_tile, " is a valid target tile.")
 				if target_ability:
-					target_ability.use_ability(clicked_tile)
+					target_ability.use_ability(player, clicked_tile)
 					if stats_component and target_ability.has_method("spend_ap"):
 						stats_component.spend_ap(target_ability.ap_cost)
 				stop_targeting_mode()
@@ -378,8 +325,9 @@ func show_movement_range():
 
 	# Get player's current map position and resources
 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+	var player_map_pos = CombatManager.world_to_map(player_local_pos)
 	var current_sp = stats_component.get_current_sp()
+	print("PlayerMovement: ", player_map_pos, player_local_pos)
 
 	# Find all tiles within SP range 
 	highlight_tiles = get_tiles_in_range(player_map_pos, current_sp)
@@ -393,55 +341,65 @@ func get_tiles_in_range(start_pos: Vector2i, range_value: int) -> Array[Vector2i
 	var tiles_in_range: Array[Vector2i] = []
 	var visited: Dictionary = {}
 	var queue: Array = []
-	
-	# Start with the starting position at distance 0
+
+	if not primary_tilemap_layer or not astar_grid:
+		printerr("PlayerMovement: Cannot get tiles in range. Missing TileMapLayer or AStarGrid.")
+		return tiles_in_range
+
+	var dynamic_obstacle_cells: Array[Vector2i] = []
+	var entitie_groups = blocking_groups + ["Enemy", "Player", "NPC", "Ally"] # Consider all relevant groups
+
+	if not is_in_targeting_mode:
+		for group_name in entitie_groups:
+			var nodes_in_group = get_tree().get_nodes_in_group(group_name)
+			for node_instance in nodes_in_group:
+				if node_instance == player: # Don't block the starting player tile itself for range calculation
+					continue
+				if node_instance is Node2D: # Check if it's a Node2D to get global_position
+					var entity_map_pos = CombatManager.world_to_map(node_instance.global_position)
+					if astar_grid.region.has_point(entity_map_pos) and not astar_grid.is_point_solid(entity_map_pos):
+						astar_grid.set_point_solid(entity_map_pos, true)
+						dynamic_obstacle_cells.append(entity_map_pos)
+
 	queue.push_back({"pos": start_pos, "dist": 0})
 	
 	while not queue.is_empty():
 		var current = queue.pop_front()
-		var pos = current["pos"]
-		var dist = current["dist"]
+		var pos: Vector2i = current["pos"]
+		var dist: int = current["dist"]
 		
-		# Skip if already visited or out of range
 		if visited.has(pos) or dist > range_value:
 			continue
 			
 		visited[pos] = dist
-		
-		# Add to tiles in range if walkable
+
 		if astar_grid.region.has_point(pos) and not astar_grid.is_point_solid(pos):
 			tiles_in_range.append(pos)
 			
-			# Add adjacent tiles if still within range
 			if dist < range_value:
-				queue.push_back({"pos": Vector2i(pos.x + 1, pos.y), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x - 1, pos.y), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x, pos.y + 1), "dist": dist + 1})
-				queue.push_back({"pos": Vector2i(pos.x, pos.y - 1), "dist": dist + 1})
-	
+				var neighbors = [
+					Vector2i(pos.x + 1, pos.y),
+					Vector2i(pos.x - 1, pos.y),
+					Vector2i(pos.x, pos.y + 1),
+					Vector2i(pos.x, pos.y - 1)
+				]
+				for neighbor_pos in neighbors:
+					if astar_grid.region.has_point(neighbor_pos): # Check if neighbor is within grid
+						queue.push_back({"pos": neighbor_pos, "dist": dist + 1})
+
+	for cell_to_revert in dynamic_obstacle_cells:
+		var tile_data: TileData = primary_tilemap_layer.get_cell_tile_data(cell_to_revert)
+		var is_permanently_solid = false
+		if tile_data:
+			is_permanently_solid = tile_data.get_custom_data("Solid") == true
+		
+		if not is_permanently_solid:
+			astar_grid.set_point_solid(cell_to_revert, false)
+
 	return tiles_in_range
 
-# func _update_turn_based_pathfinding_preview() -> void:
-# 	if not is_turn_based_mode() or not primary_tilemap_layer or not astar_grid:
-# 		return
-		
-# 	current_path_tiles.clear()
-	
-# 	if highlight_tiles.has(hover_tile):
-# 		var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-# 		var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
-# 		var path_ids = astar_grid.get_id_path(player_map_pos, hover_tile)
-# 		var new_path = [] # This will be the path for display
-# 		if path_ids.size() > 1:
-# 			new_path = path_ids.slice(1) # Exclude the starting tile
-# 		var steps_needed = new_path.size() - 1
-
-# 		if steps_needed - 1 <= stats_component.get_current_sp() and path_ids.size() > 0:
-# 			current_path_tiles = new_path
-	
-# 	queue_redraw()
 func _update_hover_preview():
-	var mouse_tile = primary_tilemap_layer.local_to_map(get_global_mouse_position())
+	var mouse_tile = CombatManager.world_to_map(get_global_mouse_position())
 
 	if is_in_targeting_mode:
 		_update_targeting_preview(mouse_tile)
@@ -455,15 +413,18 @@ func _update_turn_based_visuals(mouse_tile_pos: Vector2i):
 		return
 
 	if mouse_tile_pos in highlight_tiles:
-		var player_tile_pos = primary_tilemap_layer.local_to_map(player.global_position)
-		var full_path_from_astar = astar_grid.get_id_path(player_tile_pos, mouse_tile_pos)
-		var new_path = [] # This will be the path for display
-		if full_path_from_astar.size() > 1:
-			new_path = full_path_from_astar.slice(1) # Exclude the starting tile
-		var steps_needed = new_path.size() - 1
+		var new_path_ids = get_tile_path(mouse_tile_pos) # Use the existing function
 
-		if steps_needed <= stats_component.get_current_sp() and steps_needed > 0:
-			current_path_tiles = new_path
+		if new_path_ids.size() > 1:
+			current_path_tiles = new_path_ids.slice(1) 
+			var steps_needed = current_path_tiles.size() 
+
+			if steps_needed <= stats_component.get_current_sp() and steps_needed > 0:
+				pass
+			else:
+				current_path_tiles.clear()
+		else:
+			current_path_tiles.clear()
 		
 	queue_redraw()
 	
@@ -539,13 +500,12 @@ func handle_grid_movement(target_position: Vector2):
 		print("PlayerMovement: No Stats component or TileMapLayer found. Cannot handle grid movement.")
 		return
 
-	var target_cell = primary_tilemap_layer.local_to_map(target_position)
+	var target_cell = CombatManager.world_to_map(target_position)
 	if not target_cell in highlight_tiles:
 		print("PlayerMovement: Clicked outside movement range")
 		return
 
-	var player_cell = primary_tilemap_layer.local_to_map(player.global_position)
-	var new_path = astar_grid.get_id_path(player_cell, target_cell)
+	var new_path = get_tile_path(target_cell)
 
 	if new_path.size() <= 1: # No path or path is just the current tile
 		print("PlayerMovement: No valid path found or target is current location.")
@@ -559,6 +519,35 @@ func handle_grid_movement(target_position: Vector2):
 		for cell_id in new_path:
 			path.append(primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_id)))
 		_start_following_path()
+
+func get_tile_path(target_cell):
+	var dynamic_obstacle_cells = []
+	var entitie_groups = blocking_groups + ["Enemy", "Player", "NPC", "Ally"]
+
+	for group in entitie_groups:
+		var nodes = get_tree().get_nodes_in_group(group)
+		for node in nodes:
+			if node == self:
+				# print("Skipping self node in dynamic obstacle detection ", node.name)
+				continue # Skip self
+			if node is CharacterBody2D or node is Node2D:
+				# print("Adding dynamic obstacle for node: ", node.name)
+				var node_pos = node.global_position
+				var local_pos = primary_tilemap_layer.to_local(node_pos)
+				var cell = CombatManager.world_to_map(local_pos)
+
+				if grid_size.has_point(cell):
+					astar_grid.set_point_solid(cell, true)
+					dynamic_obstacle_cells.append(cell)
+	var new_path = []
+
+	var player_cell = CombatManager.world_to_map(player.global_position)
+	if not astar_grid.is_point_solid(target_cell):	
+		new_path = astar_grid.get_id_path(player_cell, target_cell)
+
+	for cell in dynamic_obstacle_cells:
+		astar_grid.set_point_solid(cell, false)
+	return new_path
 
 func _physics_process(_delta: float):
 	if not is_instance_valid(player):
@@ -626,70 +615,6 @@ func get_tile_size() -> float:
 		return min(tile_size.x, tile_size.y)  # Return smallest dimension to be safe
 	return cell_size.x  # Default fallback size
 
-# Debug function to visualize tile centers and entity positions
-# func draw_debug_markers(enable: bool = true) -> void:
-# 	if not movement_range_indicator or not primary_tilemap_layer:
-# 		return
-	
-# 	# Clear previous drawings
-# 	queue_redraw()
-	
-# 	if not enable:
-# 		return
-		
-# 	# Connect to the draw function if not already connected
-# 	if not movement_range_indicator.is_connected("draw", Callable(self, "_draw_debug_markers")):
-# 		movement_range_indicator.draw.connect(_draw_debug_markers)
-	
-# 	queue_redraw()
-
-# func _draw_debug_markers() -> void:
-# 	# Highlight player position
-# 	var player_pos = movement_range_indicator.to_local(player.global_position)
-# 	movement_range_indicator.draw_circle(player_pos, 4, Color(1, 0, 0, 0.8))
-	
-# 	# Draw tile centers
-# 	var visible_rect = Rect2(Vector2.ZERO, get_viewport().size)
-# 	visible_rect = visible_rect.grow(100) # Add some margin
-	
-# 	# Draw grid cells in visible area
-# 	var player_map_pos = primary_tilemap_layer.local_to_map(primary_tilemap_layer.to_local(player.global_position))
-# 	for y in range(player_map_pos.y - 10, player_map_pos.y + 10):
-# 		for x in range(player_map_pos.x - 10, player_map_pos.x + 10):
-# 			var cell_pos = Vector2i(x, y)
-# 			# Get world position of tile center
-# 			var tile_center = primary_tilemap_layer.to_global(primary_tilemap_layer.map_to_local(cell_pos))
-# 			# Convert to local coordinates of the debug display
-# 			var local_tile_center = movement_range_indicator.to_local(tile_center)
-			
-# 			# Draw tile center
-# 			movement_range_indicator.draw_circle(local_tile_center, 2, Color(0, 0.7, 1, 0.5))
-			
-# 			# Draw where the player's feet should be
-# 			var feet_pos = local_tile_center + Vector2(0, y_offset)
-# 			movement_range_indicator.draw_circle(feet_pos, 2, Color(0, 1, 0, 0.5))
-			
-# 			# Draw coordinate text
-# 			movement_range_indicator.draw_string(
-# 				ThemeDB.fallback_font, 
-# 				local_tile_center + Vector2(5, -5), 
-# 				str(cell_pos),
-# 				HORIZONTAL_ALIGNMENT_LEFT,
-# 				-1,
-# 				8,
-# 				Color(1, 1, 1, 0.7)
-# 			)
-
-# var debug_view_enabled := true
-
-# func toggle_debug_view() -> void:
-# 	if debug_view_enabled:
-# 		debug_view_enabled = false
-# 	else:
-# 		debug_view_enabled = true
-# 	draw_debug_markers(debug_view_enabled)
-# 	print("Debug view ", "enabled" if debug_view_enabled else "disabled")
-
 # Function for targeting mode for abilities
 func enter_targeting_mode(ability: AbilityData):
 	if not is_turn_based_mode():
@@ -708,7 +633,7 @@ func enter_targeting_mode(ability: AbilityData):
 	is_in_targeting_mode = true
 	target_ability = ability
 	var player_local_pos = primary_tilemap_layer.to_local(player.global_position)
-	var player_map_pos = primary_tilemap_layer.local_to_map(player_local_pos)
+	var player_map_pos = CombatManager.world_to_map(player_local_pos)
 	valid_target_tiles = get_valid_target_tiles(player_map_pos, ability)
 
 	queue_redraw()
@@ -748,21 +673,21 @@ func _update_targeting_preview(mouse_tile_pos: Vector2i):
 func get_aoe_tiles(center_tile: Vector2i, ability: AbilityData) -> Array[Vector2i]:
 	var affected_tiles: Array[Vector2i] = []
 	match ability.aoe_shape:
-		"circle":
+		"Circle":
 			var radius = ability.aoe_radius if ability else 1
 			for x in range(-radius, radius + 1):
 				for y in range(-radius, radius + 1):
 					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
 					if tile.distance_to(center_tile) <= radius and astar_grid.region.has_point(tile):
 						affected_tiles.append(tile)
-		"square":
+		"Square":
 			var size = ability.aoe_size if ability else 1
 			for x in range(-size, size + 1):
 				for y in range(-size, size + 1):
 					var tile = Vector2i(center_tile.x + x, center_tile.y + y)
 					if astar_grid.region.has_point(tile):
 						affected_tiles.append(tile)
-		"none":
+		"None":
 			# No AoE, just return the center tile
 			if astar_grid.region.has_point(center_tile):
 				affected_tiles.append(center_tile)
