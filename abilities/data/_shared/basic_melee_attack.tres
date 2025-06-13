@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="AbilityData" load_steps=5 format=3 uid="uid://dermjgm14evt8"]
+
+[ext_resource type="Script" uid="uid://bs2qabo8ek7qs" path="res://abilities/ability_effect.gd" id="1_das44"]
+[ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="2_brayf"]
+[ext_resource type="Script" uid="uid://y0hhue8moiw5" path="res://abilities/effects/damage_effect.gd" id="2_ona0y"]
+
+[sub_resource type="Resource" id="Resource_4qww6"]
+script = ExtResource("2_ona0y")
+metadata/_custom_type_script = "uid://y0hhue8moiw5"
+
+[resource]
+script = ExtResource("2_brayf")
+ability_id = &"1"
+ability_name = "Melee Weapon Attack"
+description = "Make an attack with your melee weapon"
+damage_type = ""
+damage_multiplier = 0.75
+ap_cost = 3
+cooldown_time = 0.0
+max_range = 1
+min_range = 0
+ability_power = 0.0
+target_type = 1
+aoe_shape = 2
+area_of_effect_radius = 0
+effects = Array[ExtResource("1_das44")]([SubResource("Resource_4qww6")])
+animation_name = &""
+metadata/_custom_type_script = "uid://br2yqbte6ghj6"

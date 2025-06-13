@@ -1,4 +1,4 @@
-[gd_scene load_steps=37 format=3 uid="uid://dphi76mlubcvm"]
+[gd_scene load_steps=38 format=3 uid="uid://dphi76mlubcvm"]
 
 [ext_resource type="Script" uid="uid://bbfunwmu8xikj" path="res://actors/player/player.gd" id="1_fd065"]
 [ext_resource type="Resource" uid="uid://rh235su4rx2k" path="res://actors/_shared/Stats.tres" id="2_fd065"]
@@ -222,6 +222,8 @@ animations = [{
 "speed": 5.0
 }]
 
+[sub_resource type="SkeletonModificationStack2D" id="SkeletonModificationStack2D_fd065"]
+
 [node name="Player" type="CharacterBody2D" groups=["Player"]]
 y_sort_enabled = true
 safe_margin = 0.2
@@ -238,10 +240,11 @@ frame_progress = 0.0699528
 [node name="PlayerMovement" type="Node2D" parent="."]
 position = Vector2(0, 11)
 script = ExtResource("4_0uenp")
+speed = 200.0
 
 [node name="WorldPlace" type="CollisionPolygon2D" parent="."]
 position = Vector2(0, 11)
-polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -16, -13)
+polygon = PackedVector2Array(-2, -9, 5, -13, -2, -17, -11, -12)
 
 [node name="Hitbox" type="Area2D" parent="."]
 position = Vector2(0, 11)
@@ -254,3 +257,39 @@ polygon = PackedVector2Array(-2, -10, 3, -13, -3, -16, -9, -13)
 [node name="AbilityComponent" type="Marker2D" parent="."]
 script = ExtResource("4_svriy")
 ability_set = ExtResource("7_fd065")
+
+[node name="Root" type="Skeleton2D" parent="."]
+visible = false
+modification_stack = SubResource("SkeletonModificationStack2D_fd065")
+
+[node name="Chest" type="Bone2D" parent="Root"]
+position = Vector2(0, -19)
+rest = Transform2D(1, 0, 0, 1, 0, -19)
+
+[node name="Head" type="Bone2D" parent="Root/Chest"]
+position = Vector2(0, -20)
+rest = Transform2D(1, 0, 0, 1, 0, -20)
+
+[node name="ArmLeft" type="Bone2D" parent="Root/Chest"]
+position = Vector2(8, -11)
+rest = Transform2D(1, 0, 0, 1, 8, -11)
+
+[node name="ArmRight" type="Bone2D" parent="Root/Chest"]
+position = Vector2(-13, -11)
+rest = Transform2D(1, 0, 0, 1, -13, -11)
+
+[node name="UpperLegLeft" type="Bone2D" parent="Root/Chest"]
+position = Vector2(7, 11)
+rest = Transform2D(1, 0, 0, 1, 7, 11)
+
+[node name="LowerLegLeft" type="Bone2D" parent="Root/Chest/UpperLegLeft"]
+position = Vector2(-2, 11)
+rest = Transform2D(1, 0, 0, 1, -2, 11)
+
+[node name="UpperLegRight" type="Bone2D" parent="Root/Chest"]
+position = Vector2(-10, 12)
+rest = Transform2D(1, 0, 0, 1, -10, 12)
+
+[node name="LowerLegRight" type="Bone2D" parent="Root/Chest/UpperLegRight"]
+position = Vector2(-2, 11)
+rest = Transform2D(1, 0, 0, 1, -2, 11)

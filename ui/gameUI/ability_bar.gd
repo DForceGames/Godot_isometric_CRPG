@@ -61,8 +61,16 @@ func populate_ap_for_character():
 		print("AbilityBar: Invalid character node or stats not found for AP update.")
 		return
 	
+	var current_health = initial_character.stats._current_health
+	var max_health = initial_character.stats.max_health
 	var current_ap = initial_character.stats.current_ap
 	var max_ap = initial_character.stats.max_action_points
+	var current_sp = initial_character.stats.current_sp
+	var max_sp = initial_character.stats.max_step_points
+	if current_sp == null:
+		current_sp = max_sp
 	print("AbilityBar: Current AP for character: ", current_ap)
 	print("AbilityBar: Max AP for character: ", max_ap)
+	%CurrentHealth.text = "%s/%s" % [current_health, max_health]
 	%CurrentAP.text = "%s/%s" % [current_ap, max_ap]
+	%CurrentSP.text = "%s/%s" % [current_sp, max_sp]

@@ -73,7 +73,8 @@ columns = 2
 layout_mode = 2
 text = "HP:"
 
-[node name="Label3" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+[node name="CurrentHealth" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "100/100"
 horizontal_alignment = 1
@@ -92,7 +93,8 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "SP:"
 
-[node name="Label2" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+[node name="CurrentSP" type="Label" parent="HBoxContainer/HBoxContainer/GridContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "6"
 horizontal_alignment = 1

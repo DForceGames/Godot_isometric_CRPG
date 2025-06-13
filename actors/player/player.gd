@@ -28,8 +28,6 @@ func _ready() -> void:
 	await get_tree().process_frame
 	# Get GameStateManager
 	game_state_manager = get_node_or_null("/root/GameStateManager")
-	# if game_state_manager:
-	# 	game_state_manager.game_mode_changed.connect(_on_game_mode_changed)
 
 	combat_manager = get_node_or_null("/root/CombatManager")
 	if combat_manager:
@@ -64,12 +62,13 @@ func _input(event: InputEvent) -> void:
 func on_combat_started(_turn_queue):
 	is_my_turn = false
 
-func on_combat_ended():
+func on_combat_ended(_result):
 	is_my_turn = false
 
 func on_combat_manager_turn_started(combatant):
 	if combatant == self:
 		is_my_turn = true
+		print("Player: My turn has started!")
 		stats.on_turn_started(combatant)
 	else:
 		is_my_turn = false
@@ -87,11 +86,6 @@ func take_damage(damage_amount):
 func is_dead() -> bool:
 	if not stats: return true
 	return not stats.is_alive()
-
-# Simple function to tell movement system where to go
-func _on_game_mode_changed(new_mode):
-	if movement_system:
-		movement_system._handle_game_mode_changed(new_mode)
 
 func _physics_process(_delta: float) -> void:
 	if velocity.length_squared() > 0:

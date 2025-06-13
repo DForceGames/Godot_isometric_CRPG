@@ -22,7 +22,7 @@ func _ready():
 	# stats.health_changed.connect(_on_health_changed)
 	# stats.ap_changed.connect(_on_ap_changed)
 	# stats.sp_changed.connect(_on_sp_changed)
-	# stats.died.connect(_on_died)
+	stats.died.connect(_on_died)
 
 # --- Signal Handlers ---
 
@@ -42,6 +42,11 @@ func _on_combat_ended(_result: String):
 	print("Enemy '", name, "': Combat is over. Fading away...")
 	queue_free()
 
+func _on_died():
+	# This function is called when the enemy's stats indicate it has died.
+	print("Enemy '%s' has died." % name)
+	CombatManager.turn_queue.erase(self)  # Remove this enemy from the turn queue
+	queue_free()  # Remove the enemy from the scene when it dies
 
 # --- AI and Action Logic ---
 
@@ -71,7 +76,7 @@ func execute_turn():
 	print("Turn executed for enemy: ", name)
 	
 	# End the turn AFTER all logic is complete.
-	CombatManager.end_current_turn()
+	CombatManager.change_state(CombatManager.CombatState.CHOOSING_COMBATANT)
 
 
 # --- Utility Function ---

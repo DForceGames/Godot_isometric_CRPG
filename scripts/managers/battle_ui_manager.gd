@@ -32,8 +32,8 @@ func _on_combat_started(turn_queue: Array[Node]):
 
 func _on_combat_ended(_result: String):
 	# Hide the UI when combat ends
-	anim_player.play("hide")
-	await anim_player.animation_finished
+	# anim_player.play("hide")
+	# await anim_player.animation_finished
 	visible = false
 
 	# Also tell the TurnOrderDisplay to clean up its icons
@@ -45,4 +45,4 @@ func _on_turn_started(character_node: Node):
 
 func _on_end_turn_button_pressed() -> void:
 	print("BattleUI: End Turn button pressed")
-	CombatManager.end_current_turn()
+	CombatManager.change_state(CombatManager.CombatState.CHOOSING_COMBATANT)

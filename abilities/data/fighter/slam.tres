@@ -11,7 +11,7 @@ metadata/_custom_type_script = "uid://y0hhue8moiw5"
 
 [resource]
 script = ExtResource("1_l8n0l")
-ability_id = &"1"
+ability_id = &"11"
 ability_name = "Slam"
 description = "Slam the ground in from of you, doing extra damage."
 icon = ExtResource("1_8aufi")
