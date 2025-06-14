@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="AbilitySet" load_steps=4 format=3 uid="uid://kixe42ispinv"]
+
+[ext_resource type="Script" uid="uid://br2yqbte6ghj6" path="res://abilities/ability_data.gd" id="1_ikbey"]
+[ext_resource type="Script" uid="uid://b4sm4rvu5gc0v" path="res://abilities/ability_set.gd" id="2_2uxio"]
+[ext_resource type="Resource" uid="uid://dermjgm14evt8" path="res://abilities/data/_shared/basic_melee_attack.tres" id="2_dyxgj"]
+
+[resource]
+script = ExtResource("2_2uxio")
+learned_abilities = Array[ExtResource("1_ikbey")]([ExtResource("2_dyxgj")])
+metadata/_custom_type_script = "uid://b4sm4rvu5gc0v"

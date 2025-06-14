@@ -2,7 +2,7 @@ extends Resource
 
 class_name Stats
 
-signal health_changed(current_health, max_health)
+signal health_changed(current_health)
 signal ap_changed(current_ap)
 signal sp_changed(current_sp)
 signal died()
@@ -21,22 +21,24 @@ var _current_health: int:
 				died.emit()
 
 @export var max_action_points: int = 6
+var _current_ap: int
 var current_ap: int: 
-	get: return current_ap
+	get: return _current_ap
 	set(value):
-		var previous_ap = current_ap
-		current_ap = clamp(value, 0, max_action_points)
-		if current_ap != previous_ap:
-			ap_changed.emit(current_ap)
+		var previous_ap = _current_ap
+		_current_ap = clamp(value, 0, max_action_points)
+		if _current_ap != previous_ap:
+			ap_changed.emit(_current_ap)
 
 @export var max_step_points: int = 6
-var current_sp: 
-	get: return current_sp
+var _current_sp: int
+var current_sp: int: 
+	get: return _current_sp
 	set(value):
-		var previous_sp = current_sp
-		current_sp = clamp(value, 0, max_step_points)
-		if current_sp != previous_sp:
-			sp_changed.emit(current_sp)
+		var previous_sp = _current_sp
+		_current_sp = clamp(value, 0, max_step_points)
+		if _current_sp != previous_sp:
+			sp_changed.emit(_current_sp)
 
 @export var attack_power: int = 10
 @export var defense: int = 5
@@ -44,6 +46,11 @@ var current_sp:
 @export var magic_defense: int = 3
 @export var initiative: int = 10
 
+@export_group("Persona")
+@export var target_closest: int = 1
+@export var target_lowest_health: int = 1
+@export var self_preserve: int = 1
+@export var group_up: int = 1
 
 func initialize_stats():
 	_current_health = max_health

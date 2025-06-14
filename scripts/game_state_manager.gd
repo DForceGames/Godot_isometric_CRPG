@@ -27,6 +27,7 @@ signal game_mode_changed(new_mode: GameMode)
 
 func switch_to_real_time():
 	self.current_mode = GameMode.REAL_TIME
+	game_mode_changed.emit(current_mode)
 
 func switch_to_turn_based():
 	self.current_mode = GameMode.TURN_BASED
@@ -51,3 +52,19 @@ func prepare_for_battle(battle_data: Dictionary):
 	PartyManager.make_party_persistent_for_transition()
 
 	get_tree().call_deferred("change_scene_to_file", battle_data["battle_map"])
+
+func return_to_exploration():
+	if not return_to_scene:
+		printerr("GameStateManager: No return scene set!")
+		return
+	var player = PartyManager.main_character
+	if not is_instance_valid(player) and is_instance_valid(return_to_position):
+		printerr("GameStateManager: Main character is not valid!")
+		return
+
+	PartyManager.make_party_persistent_for_transition()
+	player.global_position = return_to_position
+	switch_to_real_time()
+	print("GameStateManager: Returning to exploration scene: ", return_to_scene, " at position: ", return_to_position)
+	print("GameStateManager: current gamemode is now: ", current_mode)
+	get_tree().call_deferred("change_scene_to_file", return_to_scene)

@@ -4,14 +4,29 @@ extends Node
 signal combat_started(turn_order)
 signal combat_ended(result)
 signal turn_started(combatant)
+# signal player_turn_started(combatant)
 signal new_round_started(round_number)
 signal grid_made()
 
+enum CombatState {
+	INACTIVE,
+	COMBAT_STARTED,
+	CHOOSING_COMBATANT,
+	PLAYER_TURN,
+	ENEMY_TURN,
+	COMBAT_ENDED
+}
+var current_state: CombatState = CombatState.INACTIVE
+var active_combatant: Node = null
+
 var npc_id
+var ai_brain: AIBrain = AIBrain.new()
+# Initialize AI brain with debug mode off
+# To enable debug logging, call ai_brain.set_debug_mode(true)
 
 var turn_queue: Array[Node] = []
 var turn_index: int = 0
-var round_number: int = 1
+var round_number: int = -1
 var is_combat_ended: bool = false
 
 # Vars needed for gridmap and positions
@@ -20,53 +35,115 @@ var grid_size
 var tileset: TileSet = null
 var active_tilemap: TileMapLayer = null
 var combatant_positions: Dictionary = {}
-var cell_size: Vector2 = Vector2(64, 32)
+var scale_factor = active_tilemap.scale if active_tilemap else Vector2(1, 1)
+var cell_size: Vector2 = Vector2(64 * scale_factor.x, 32 * scale_factor.y)
 var is_in_targeting_mode: bool = false
+
+func change_state(new_state: CombatState):
+	if current_state == new_state:
+		return
+	
+	current_state = new_state
+	print("CombatManager: State changed to ", current_state)
+
+	match current_state:
+		CombatState.CHOOSING_COMBATANT:
+			print("----------------CombatManager: Choosing combatant state----------------")
+			if check_end_of_combat_conditions(): 
+				change_state(CombatState.COMBAT_ENDED)
+
+			var next_combatant = find_next_living_combatant()
+			if next_combatant:
+				active_combatant = next_combatant
+				var timer = get_tree().create_timer(0.5)
+				timer.timeout.connect(func():
+					if active_combatant.is_in_group("Player") or active_combatant.is_in_group("Ally"):
+						change_state(CombatState.PLAYER_TURN)
+					elif active_combatant.is_in_group("Enemy"):
+						change_state(CombatState.ENEMY_TURN)
+				)
+			else:
+				change_state(CombatState.COMBAT_ENDED)
+
+		CombatState.PLAYER_TURN:
+			print("CombatManager: Player turn started for ", active_combatant.name)
+			active_combatant.on_combat_manager_turn_started(active_combatant)
+			# player_turn_started.emit(active_combatant)
+
+		CombatState.ENEMY_TURN:
+			active_combatant._on_turn_started(active_combatant)
+			turn_started.emit(active_combatant)
+			
+			# Add a brief delay before AI actions
+			var timer = get_tree().create_timer(0.5)
+			await timer.timeout
+			
+			# Execute AI turn and wait for completion
+			if not ai_brain.is_connected("turn_finished", enemy_ended_turn):
+				ai_brain.turn_finished.connect(enemy_ended_turn)
+				
+			await ai_brain.execute_turn_sequence(active_combatant)
+			
+			# Disconnect the signal
+			if ai_brain.is_connected("turn_finished", enemy_ended_turn):
+				ai_brain.turn_finished.disconnect(enemy_ended_turn)
+		CombatState.COMBAT_ENDED:
+			var result = check_end_of_combat_conditions()
+			end_combat(result)
 
 func start_combat(player_party, enemies):
 	turn_queue.clear()
 	turn_index = 0
 	round_number = 1
-
-	var combatants_with_rolls = []
-
 	initialize_grid()
 
-	# Turn order setup
+	var combatants_with_rolls = []
 	for player in player_party:
 		if is_instance_valid(player):
 			combatants_with_rolls.append({"Node": player,"Roll": player.stats.initiative})
-	
+		
 	for enemy in enemies:
 		if is_instance_valid(enemy):
 			combatants_with_rolls.append({"Node": enemy,"Roll": enemy.stats.initiative})
-	
+				
 	combatants_with_rolls.sort_custom(func(a, b): return a.Roll > b.Roll)
-
+			
 	for combatant_data in combatants_with_rolls:
 		var combatant = combatant_data["Node"]
 		turn_queue.append(combatant)
 		if combatant.has_method("on_start_combat"):
 			combatant.on_start_combat()
-
-	# Assign combatant positions based on their order in the turn queue
 	combatant_positions.clear()
 	for combatant in turn_queue:
 		var start_pos = world_to_map(combatant.global_position)
 		register_combatant_position(combatant, start_pos)
 
 	combat_started.emit(turn_queue)
-	print("CombatManager: Combatants sorted by initiative rolls:", turn_queue)
+	change_state(CombatState.CHOOSING_COMBATANT)
 
-	next_turn()
+func find_next_living_combatant():
+	for _i in range(turn_queue.size()):
+		turn_index += 1
+		if turn_index >= turn_queue.size():
+			turn_index = 0
+			round_number += 1
+			new_round_started.emit(round_number)
+
+		var current_combatant = turn_queue[turn_index]
+		if is_instance_valid(current_combatant) and current_combatant.stats.is_alive():
+			print("CombatManager: Next living combatant is %s (Turn Index: %d, Round: %d)" % [current_combatant.name, turn_index, round_number])
+			return current_combatant
+	return null
+
+func player_ended_turn():
+	print("CombatManager: Player ended turn.")
+	change_state(CombatState.CHOOSING_COMBATANT)
+
+func enemy_ended_turn():
+	print("CombatManager: Enemy ended turn.")
+	change_state(CombatState.CHOOSING_COMBATANT)
 
 func end_combat(result: String):
-	# Safety check
-	if is_combat_ended:
-		return
-	
-	# Signal for rewards or loss
-	is_combat_ended = true
 	combat_ended.emit(result)
 
 	# Cleanup
@@ -74,9 +151,6 @@ func end_combat(result: String):
 		if not is_instance_valid(combatant):
 			if combatant.has_method("end_combat"):
 				continue
-
-		# if combatant.died.is_connected(on_combatant_died):
-		#     combatant.died.disconnect(on_combatant_died)
 
 		if combatant.has_method("end_combat"):
 			combatant.end_combat()
@@ -87,10 +161,10 @@ func end_combat(result: String):
 	turn_index = -1
 	round_number = 1
 
+	# Return to main state
+	GameStateManager.return_to_exploration()
+
 func check_end_of_combat_conditions():
-	if is_combat_ended:
-		return
-	
 	var player_combatants_alive = false
 	var enemy_combatants_alive = false
 
@@ -103,58 +177,11 @@ func check_end_of_combat_conditions():
 			enemy_combatants_alive = true
 
 	if not player_combatants_alive:
-		end_combat("DEFEAT")
-		return
+		return "DEFEAT"
 	elif not enemy_combatants_alive:
-		end_combat("VICTORY")
-	
+		return "VICTORY"
+
 	return
-
-# handle turn logic
-func next_turn():
-	# safety check
-	if is_combat_ended:
-		return
-	
-	turn_index += 1
-	
-	# Check turn and round progression
-	if turn_index >= turn_queue.size():
-		turn_index = 0
-		round_number += 1
-		new_round_started.emit(round_number)
-	
-	var current_combatant = turn_queue[turn_index]
-	# Skip dead combatants
-	while is_instance_valid(current_combatant) and current_combatant.stats.is_alive() == false:
-		print("CombatManager: Skipping dead combatant %s" % current_combatant.name)
-		next_turn()
-		return
-
-	_begin_turn_for(current_combatant)
-
-func _begin_turn_for(combatant: Node):
-	if combatant.has_method("on_start_turn"):
-		combatant.on_start_turn()
-	
-	if combatant.has_method("process_statuses"):
-		combatant.process_statuses()
-	
-	if combatant.stats.is_alive() == false:
-		print("CombatManager: Combatant %s is dead, skipping turn." % combatant.name)
-		next_turn()
-		return
-	
-	turn_started.emit(combatant)
-
-func end_current_turn():
-	# safety check
-	if is_combat_ended:
-		return
-	
-	check_end_of_combat_conditions()
-	
-	next_turn()
 
 # ---------------------------- Setup Battle Map with logic ----------------------------
 
@@ -195,7 +222,8 @@ func world_to_map(world_position: Vector2):
 		printerr("CombatManager: No active tilemap set!")
 		return Vector2.ZERO
 	
-	return active_tilemap.local_to_map(world_position)
+	var adjusted = world_position / active_tilemap.scale
+	return active_tilemap.local_to_map(adjusted)
 
 func map_to_world(map_position: Vector2): # Gets it to the centre of the tile
 	if not active_tilemap:
@@ -207,8 +235,20 @@ func map_to_world(map_position: Vector2): # Gets it to the centre of the tile
 func register_combatant_position(combatant: Node, map_position: Vector2):
 	combatant_positions[map_position] = combatant
 
-func get_combatant_at_tile(map_position: Vector2):
-	return combatant_positions.get(map_position, null)
+func update_combatant_position(combatant: Node, map_position: Vector2i): # Use Vector2i for tile coordinates
+	combatant_positions[map_position] = combatant
+
+func get_combatant_at_tile(map_position: Vector2i): # Use Vector2i for tile coordinates
+
+	var combatant_on_tile = combatant_positions.get(map_position, null)
+	
+	# You can add a print statement here for debugging if needed, e.g.:
+	if combatant_on_tile:
+		print("Combatant found at ", map_position, ": ", combatant_on_tile.name)
+	else:
+		print("No combatant found at ", map_position, " out of combatant_positions: ", combatant_positions)
+		
+	return combatant_on_tile
 
 func get_aoe_tiles(center_tile: Vector2i, ability: AbilityData) -> Array[Vector2i]:
 	print("CombatManager: Getting AoE tiles for ability: ", ability.ability_name, " wiht AoE shape: ", ability.aoe_shape, " at center tile: ", center_tile)
@@ -263,9 +303,11 @@ func set_tiles_solid_from_groups() -> void:
 			else:
 				continue
 
-func get_tile_path(target_cell, player):
+func get_tile_path(target_cell, player_pos):
 	var dynamic_obstacle_cells = []
 	var entitie_groups = ["Enemy", "Player", "NPC", "Ally"]
+
+	# print("CombatManager: Getting tile path to target cell: ", target_cell, " from player position: ", player_pos)
 
 	for group in entitie_groups:
 		var nodes = get_tree().get_nodes_in_group(group)
@@ -275,21 +317,19 @@ func get_tile_path(target_cell, player):
 				continue # Skip self
 			if node is CharacterBody2D or node is Node2D:
 				# print("Adding dynamic obstacle for node: ", node.name)
-				var node_pos = node.global_position
-				var local_pos = active_tilemap.to_local(node_pos)
-				var cell = world_to_map(local_pos)
+				var cell = world_to_map(node.global_position)
 
 				if grid_size.has_point(cell):
 					astar_grid.set_point_solid(cell, true)
 					dynamic_obstacle_cells.append(cell)
 	var new_path = []
+	for cell in dynamic_obstacle_cells:
+		CombatManager.astar_grid.set_point_solid(cell, false)
 
-	var player_cell = world_to_map(player.global_position)
+	var player_cell = world_to_map(player_pos)
 	if not astar_grid.is_point_solid(target_cell):	
 		new_path = astar_grid.get_id_path(player_cell, target_cell)
 
-	for cell in dynamic_obstacle_cells:
-		CombatManager.astar_grid.set_point_solid(cell, false)
 	return new_path
 
 func get_tiles_in_range(start_pos: Vector2i, range_value: int, player):
@@ -352,3 +392,52 @@ func get_tiles_in_range(start_pos: Vector2i, range_value: int, player):
 			CombatManager.astar_grid.set_point_solid(cell_to_revert, false)
 
 	return tiles_in_range
+
+func get_adjacent_tiles(tile_pos):
+	var neighbors = []
+	var directions = [
+		Vector2i(1, 0),  # Right
+		Vector2i(-1, 0), # Left
+		Vector2i(0, 1),  # Down
+		Vector2i(0, -1)  # Up
+	]
+	for dir in directions:
+		var neighbor_pos = tile_pos + dir
+		if astar_grid.region.has_point(neighbor_pos) and not astar_grid.is_point_solid(neighbor_pos):
+			neighbors.append(neighbor_pos)
+	print("CombatManager: Adjacent tiles for ", tile_pos, ": ", neighbors)
+	return neighbors
+
+
+func get_combatant_position(combatant):
+	var combatant_global_pos = combatant.global_position
+	print("CombatManager: Getting combatant position for ", combatant.name, " at global position: ", combatant_global_pos)
+	var combatant_pos = world_to_map(combatant_global_pos)
+	print("CombatManager: Combatant position for ", combatant.name, " is at map position: ", combatant_pos)
+	return combatant_pos
+
+func get_all_players():
+	var players = []
+	for player_node in get_tree().get_nodes_in_group("Player"):
+		players.append(player_node)
+	for ally_node in get_tree().get_nodes_in_group("Ally"):
+		players.append(ally_node)
+	return players
+
+func get_all_enemies():
+	var enemies = []
+	for enemy in get_tree().get_nodes_in_group("Enemy"):
+		enemies.append(enemy)
+	return enemies
+
+func get_units_in_aoe_tiles(aoe_center_pos, ability):
+	var tiles_in_aoe = get_aoe_tiles(aoe_center_pos, ability)
+	var unit_in_aoe = []
+	for tile in tiles_in_aoe:
+		if not astar_grid.region.has_point(tile):
+			continue
+		
+		var combatant = get_combatant_at_tile(tile)
+		if combatant and combatant.stats.is_alive():
+			unit_in_aoe.append(combatant)
+	return unit_in_aoe

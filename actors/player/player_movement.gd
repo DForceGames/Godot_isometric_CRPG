@@ -157,7 +157,9 @@ func follow_path() -> void:
 		path.remove_at(0) # Remove reached waypoint
 		
 		if is_turn_based_mode():
-			print("PlayerMovement: Step taken, remaining path size: ", path.size())
+			# print("PlayerMovement: Step taken, remaining path size: ", path.size())
+			# Update entity position in CombatManager
+			# CombatManager.update_combatant_position(self, CombatManager.world_to_map(Player.global_position))
 			emit_signal("step_taken") # Emit signal that we've taken a step
 
 		# If path becomes empty after removing current waypoint
@@ -226,10 +228,9 @@ func show_movement_range():
 	highlight_tiles.clear()
 
 	# Get player's current map position and resources
-	var player_local_pos = CombatManager.active_tilemap.to_local(player.global_position)
-	var player_map_pos = CombatManager.world_to_map(player_local_pos)
+	var player_map_pos = CombatManager.world_to_map(player.global_position)
 	var current_sp = stats_component.get_current_sp()
-	print("PlayerMovement: ", player_map_pos, player_local_pos)
+	print("PlayerMovement: ", player_map_pos)
 
 	# Find all tiles within SP range 
 	highlight_tiles = CombatManager.get_tiles_in_range(player_map_pos, current_sp, player)
@@ -254,7 +255,7 @@ func _update_turn_based_visuals(mouse_tile_pos: Vector2i):
 		return
 
 	if mouse_tile_pos in highlight_tiles:
-		var new_path_ids = CombatManager.get_tile_path(mouse_tile_pos, player) # Use the existing function
+		var new_path_ids = CombatManager.get_tile_path(mouse_tile_pos, player.global_position) # Use the existing function
 
 		if new_path_ids.size() > 1:
 			current_path_tiles = new_path_ids.slice(1) 
@@ -305,28 +306,6 @@ func _draw_tile_highlight(tile_pos: Vector2i, color: Color):
 
 	draw_colored_polygon(points, color)
 
-# # Override the existing handle_game_mode_changed function
-func _handle_game_mode_changed(new_mode):
-	if new_mode == GameStateManager.GameMode.TURN_BASED:
-		print("PlayerMovement: Switching to turn-based mode")
-
-		var current_scene = get_tree().current_scene
-		if current_scene:
-			CombatManager.active_tilemap = current_scene.find_child("Ground", true, false) as TileMapLayer
-			
-		if not CombatManager.active_tilemap:
-			printerr("PlayerMovement: PrimaryTileMapLayer not found in scene root. Movement system requires a TileMapLayer.")
-			return
-
-# 		initialize_grid()
-		show_movement_range()
-
-# 	elif new_mode == GameStateManager.GameMode.REAL_TIME:
-# 		print("PlayerMovement: Switching to real-time mode")
-# 		if movement_range_indicator:
-# 			movement_range_indicator.visible = false
-# 		path.clear()
-
 func handle_freeroam_movement(target_position: Vector2):
 	self.freeroam_target_position = target_position
 
@@ -346,7 +325,7 @@ func handle_grid_movement(target_position: Vector2):
 		print("PlayerMovement: Clicked outside movement range")
 		return
 
-	var new_path = CombatManager.get_tile_path(target_cell, player)
+	var new_path = CombatManager.get_tile_path(target_cell, player.global_position)
 
 	if new_path.size() <= 1: # No path or path is just the current tile
 		print("PlayerMovement: No valid path found or target is current location.")
@@ -364,6 +343,11 @@ func handle_grid_movement(target_position: Vector2):
 func _physics_process(_delta: float):
 	if not is_instance_valid(player):
 		return
+
+	if GameStateManager.is_turn_based():
+		speed = 100
+	elif GameStateManager.is_real_time():
+		speed = 200  # Use player's speed in real-time mode
 
 	if is_turn_based_mode():
 		if path.size() > 0:
@@ -389,6 +373,8 @@ func _on_sp_changed(_new_sp):
 # Ensure _on_step_taken exists if connected in _ready
 func _on_step_taken() -> void:
 	if is_turn_based_mode():
+		# Update entity position in CombatManager
+		CombatManager.update_combatant_position(player, CombatManager.world_to_map(player.global_position))
 		if movement_range_indicator: queue_redraw()
 		
 
@@ -420,13 +406,6 @@ func _start_following_path() -> void:
 	current_phase = MovementPhase.FOLLOWING_PATH
 	emit_signal("movement_started")
 
-# Get the tile size based on the tilemap
-# func get_tile_size() -> float:
-# 	if CombatManager.active_tilemap and CombatManager.active_tilemap.tile_set:
-# 		var tile_size = CombatManager.active_tilemap.tile_set.tile_size
-# 		return min(tile_size.x, tile_size.y)  # Return smallest dimension to be safe
-# 	return CombatManager.cell_size.x  # Default fallback size
-
 # Function for targeting mode for abilities
 func enter_targeting_mode(ability: AbilityData):
 	if not is_turn_based_mode():
@@ -444,8 +423,7 @@ func enter_targeting_mode(ability: AbilityData):
 	get_node("_hover_timer").stop()
 	CombatManager.is_in_targeting_mode = true
 	target_ability = ability
-	var player_local_pos = CombatManager.active_tilemap.to_local(player.global_position)
-	var player_map_pos = CombatManager.world_to_map(player_local_pos)
+	var player_map_pos = CombatManager.world_to_map(player.global_position)
 	valid_target_tiles = get_valid_target_tiles(player_map_pos, ability)
 
 	queue_redraw()

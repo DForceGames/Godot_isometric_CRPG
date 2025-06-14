@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://dqf8ajeprmka5"]
+[gd_scene load_steps=5 format=3 uid="uid://dqf8ajeprmka5"]
 
 [ext_resource type="Script" uid="uid://dfle2853d51yq" path="res://actors/enemy/enemy.gd" id="1_jqx28"]
 [ext_resource type="Resource" uid="uid://rh235su4rx2k" path="res://actors/_shared/Stats.tres" id="2_r6xaq"]
+[ext_resource type="Script" uid="uid://daaduh2v5kfms" path="res://abilities/ability_component.gd" id="3_ooidh"]
+[ext_resource type="Resource" uid="uid://kixe42ispinv" path="res://actors/_shared/abilities.tres" id="4_bnhc7"]
 
 [node name="Enemy" type="Node2D" groups=["Enemy"]]
 script = ExtResource("1_jqx28")
@@ -12,3 +14,7 @@ stats = ExtResource("2_r6xaq")
 [node name="WorldPlace" type="CollisionPolygon2D" parent="."]
 position = Vector2(4, 14)
 polygon = PackedVector2Array(-1, -5, 10, -13, -1, -20, -16, -13)
+
+[node name="AbilityComponent" type="Marker2D" parent="."]
+script = ExtResource("3_ooidh")
+ability_set = ExtResource("4_bnhc7")
