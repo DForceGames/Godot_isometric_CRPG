@@ -33,7 +33,7 @@ func _ready() -> void:
 	if combat_manager:
 		combat_manager.combat_started.connect(on_combat_started)
 		combat_manager.combat_ended.connect(on_combat_ended)
-		combat_manager.turn_started.connect(on_combat_manager_turn_started)
+		# combat_manager.player_turn_started.connect(on_combat_manager_turn_started)
 	
 	# Get player stats
 	if not stats:

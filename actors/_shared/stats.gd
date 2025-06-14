@@ -2,7 +2,7 @@ extends Resource
 
 class_name Stats
 
-signal health_changed(current_health, max_health)
+signal health_changed(current_health)
 signal ap_changed(current_ap)
 signal sp_changed(current_sp)
 signal died()

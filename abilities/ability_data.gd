@@ -62,4 +62,5 @@ func use_ability(user, center_tile):
 
 func calc_damage(user):
 	var base_damage = user.stats.attack_power * damage_multiplier
+	print("Calculated damage for ability '%s': %d" % [ability_name, base_damage])
 	return base_damage

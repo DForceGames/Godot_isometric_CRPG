@@ -4,6 +4,7 @@ extends Node
 signal combat_started(turn_order)
 signal combat_ended(result)
 signal turn_started(combatant)
+# signal player_turn_started(combatant)
 signal new_round_started(round_number)
 signal grid_made()
 
@@ -20,6 +21,8 @@ var active_combatant: Node = null
 
 var npc_id
 var ai_brain: AIBrain = AIBrain.new()
+# Initialize AI brain with debug mode off
+# To enable debug logging, call ai_brain.set_debug_mode(true)
 
 var turn_queue: Array[Node] = []
 var turn_index: int = 0
@@ -45,31 +48,45 @@ func change_state(new_state: CombatState):
 
 	match current_state:
 		CombatState.CHOOSING_COMBATANT:
-			print("CombatManager: Choosing combatant state")
+			print("----------------CombatManager: Choosing combatant state----------------")
 			if check_end_of_combat_conditions(): 
 				change_state(CombatState.COMBAT_ENDED)
 
 			var next_combatant = find_next_living_combatant()
 			if next_combatant:
 				active_combatant = next_combatant
-				if active_combatant.is_in_group("Player") or active_combatant.is_in_group("Ally"):
-					change_state(CombatState.PLAYER_TURN)
-				elif active_combatant.is_in_group("Enemy"):
-					change_state(CombatState.ENEMY_TURN)
+				var timer = get_tree().create_timer(0.5)
+				timer.timeout.connect(func():
+					if active_combatant.is_in_group("Player") or active_combatant.is_in_group("Ally"):
+						change_state(CombatState.PLAYER_TURN)
+					elif active_combatant.is_in_group("Enemy"):
+						change_state(CombatState.ENEMY_TURN)
+				)
 			else:
 				change_state(CombatState.COMBAT_ENDED)
 
 		CombatState.PLAYER_TURN:
+			print("CombatManager: Player turn started for ", active_combatant.name)
 			active_combatant.on_combat_manager_turn_started(active_combatant)
-			turn_started.emit(active_combatant)
+			# player_turn_started.emit(active_combatant)
 
 		CombatState.ENEMY_TURN:
 			active_combatant._on_turn_started(active_combatant)
 			turn_started.emit(active_combatant)
+			
+			# Add a brief delay before AI actions
 			var timer = get_tree().create_timer(0.5)
-			timer.timeout.connect(func():
-				ai_brain.execute_turn_sequence(active_combatant)
-			)
+			await timer.timeout
+			
+			# Execute AI turn and wait for completion
+			if not ai_brain.is_connected("turn_finished", enemy_ended_turn):
+				ai_brain.turn_finished.connect(enemy_ended_turn)
+				
+			await ai_brain.execute_turn_sequence(active_combatant)
+			
+			# Disconnect the signal
+			if ai_brain.is_connected("turn_finished", enemy_ended_turn):
+				ai_brain.turn_finished.disconnect(enemy_ended_turn)
 		CombatState.COMBAT_ENDED:
 			var result = check_end_of_combat_conditions()
 			end_combat(result)
@@ -218,8 +235,20 @@ func map_to_world(map_position: Vector2): # Gets it to the centre of the tile
 func register_combatant_position(combatant: Node, map_position: Vector2):
 	combatant_positions[map_position] = combatant
 
-func get_combatant_at_tile(map_position: Vector2):
-	return combatant_positions.get(map_position, null)
+func update_combatant_position(combatant: Node, map_position: Vector2i): # Use Vector2i for tile coordinates
+	combatant_positions[map_position] = combatant
+
+func get_combatant_at_tile(map_position: Vector2i): # Use Vector2i for tile coordinates
+
+	var combatant_on_tile = combatant_positions.get(map_position, null)
+	
+	# You can add a print statement here for debugging if needed, e.g.:
+	if combatant_on_tile:
+		print("Combatant found at ", map_position, ": ", combatant_on_tile.name)
+	else:
+		print("No combatant found at ", map_position, " out of combatant_positions: ", combatant_positions)
+		
+	return combatant_on_tile
 
 func get_aoe_tiles(center_tile: Vector2i, ability: AbilityData) -> Array[Vector2i]:
 	print("CombatManager: Getting AoE tiles for ability: ", ability.ability_name, " wiht AoE shape: ", ability.aoe_shape, " at center tile: ", center_tile)
@@ -278,6 +307,8 @@ func get_tile_path(target_cell, player_pos):
 	var dynamic_obstacle_cells = []
 	var entitie_groups = ["Enemy", "Player", "NPC", "Ally"]
 
+	# print("CombatManager: Getting tile path to target cell: ", target_cell, " from player position: ", player_pos)
+
 	for group in entitie_groups:
 		var nodes = get_tree().get_nodes_in_group(group)
 		for node in nodes:
@@ -292,13 +323,13 @@ func get_tile_path(target_cell, player_pos):
 					astar_grid.set_point_solid(cell, true)
 					dynamic_obstacle_cells.append(cell)
 	var new_path = []
+	for cell in dynamic_obstacle_cells:
+		CombatManager.astar_grid.set_point_solid(cell, false)
 
 	var player_cell = world_to_map(player_pos)
 	if not astar_grid.is_point_solid(target_cell):	
 		new_path = astar_grid.get_id_path(player_cell, target_cell)
 
-	for cell in dynamic_obstacle_cells:
-		CombatManager.astar_grid.set_point_solid(cell, false)
 	return new_path
 
 func get_tiles_in_range(start_pos: Vector2i, range_value: int, player):

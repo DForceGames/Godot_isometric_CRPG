@@ -157,7 +157,9 @@ func follow_path() -> void:
 		path.remove_at(0) # Remove reached waypoint
 		
 		if is_turn_based_mode():
-			print("PlayerMovement: Step taken, remaining path size: ", path.size())
+			# print("PlayerMovement: Step taken, remaining path size: ", path.size())
+			# Update entity position in CombatManager
+			# CombatManager.update_combatant_position(self, CombatManager.world_to_map(Player.global_position))
 			emit_signal("step_taken") # Emit signal that we've taken a step
 
 		# If path becomes empty after removing current waypoint
@@ -371,6 +373,8 @@ func _on_sp_changed(_new_sp):
 # Ensure _on_step_taken exists if connected in _ready
 func _on_step_taken() -> void:
 	if is_turn_based_mode():
+		# Update entity position in CombatManager
+		CombatManager.update_combatant_position(player, CombatManager.world_to_map(player.global_position))
 		if movement_range_indicator: queue_redraw()
 		
 
